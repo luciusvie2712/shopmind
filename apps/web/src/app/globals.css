@@ -122,9 +122,26 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-slate-50 text-foreground;
   }
   html {
     @apply font-sans;
+  }
+  :where(a, button, input, select, textarea, summary):focus-visible {
+    @apply outline-2 outline-offset-2 outline-slate-900;
+  }
+  .form-input {
+    @apply mt-1 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
