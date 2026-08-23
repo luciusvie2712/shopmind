@@ -1,0 +1,159 @@
+name: shopmind-dev
+
+x-api-runtime: &api-runtime
+  image: shopmind-api-dev
+  build:
+    context: .
+    dockerfile: apps/api/Dockerfile
+    target: runtime
+  environment:
+    DATABASE_URL: postgresql://${POSTGRES_USER:-shopmind}:${POSTGRES_PASSWORD:-shopmind_local}@postgres:5432/${POSTGRES_DB:-shopmind}
+    REDIS_URL: redis://redis:6379
+    JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET must be set in .env}
+    JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+    REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-7}
+    DUMMYJSON_BASE_URL: ${DUMMYJSON_BASE_URL:-https://dummyjson.com}
+    GEMINI_API_KEY: ${GEMINI_API_KEY:?GEMINI_API_KEY must be set in .env}
+    GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-flash-lite}
+    GEMINI_EMBEDDING_MODEL: ${GEMINI_EMBEDDING_MODEL:-gemini-embedding-2}
+    GEMINI_EMBEDDING_DIMENSION: ${GEMINI_EMBEDDING_DIMENSION:-768}
+    AI_TIMEOUT_MS: ${AI_TIMEOUT_MS:-8000}
+    AI_MAX_TOOL_STEPS: ${AI_MAX_TOOL_STEPS:-4}
+    API_PORT: "4000"
+    WEB_ORIGIN: http://localhost:${DEV_WEB_PORT:-3000}
+    COOKIE_SECURE: "false"
+    NODE_ENV: development
+  init: true
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.1-pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-shopmind}
+      POSTGRES_USER: ${POSTGRES_USER:-shopmind}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shopmind_local}
+    ports:
+      - "${DEV_POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7.4.2-alpine
+    restart: unless-stopped
+    ports:
+      - "${DEV_REDIS_PORT:-6381}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  migrate:
+    <<: *api-runtime
+    restart: "no"
+    command: ["pnpm", "--filter", "api", "prisma:migrate:deploy"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  bootstrap-catalog:
+    <<: *api-runtime
+    restart: "no"
+    command: ["node", "apps/api/dist/catalog-bootstrap.js"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  api:
+    <<: *api-runtime
+    restart: unless-stopped
+    command: ["node", "apps/api/dist/main.js"]
+    ports:
+      - "${DEV_API_PORT:-4000}:4000"
+    depends_on:
+      bootstrap-catalog:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4000/api/v1/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  worker:
+    <<: *api-runtime
+    restart: unless-stopped
+    command: ["node", "apps/api/dist/worker.js"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  web:
+    image: shopmind-web-dev
+    build:
+      context: .
+      args:
+        SHOPMIND_API_BASE_URL: http://api:4000/api/v1
+      dockerfile_inline: |
+        FROM node:24.15.0-bookworm-slim
+        ENV PNPM_HOME=/pnpm
+        ENV PATH=$${PNPM_HOME}:$${PATH}
+        RUN corepack enable && corepack prepare pnpm@10.15.0 --activate
+        WORKDIR /workspace
+        COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+        COPY apps/api/package.json apps/api/package.json
+        COPY apps/web/package.json apps/web/package.json
+        COPY packages/contracts/package.json packages/contracts/package.json
+        RUN pnpm install --frozen-lockfile --filter web... --filter @shopmind/contracts
+        COPY apps/web apps/web
+        COPY packages/contracts packages/contracts
+        ARG SHOPMIND_API_BASE_URL
+        ENV SHOPMIND_API_BASE_URL=$${SHOPMIND_API_BASE_URL}
+        ENV NODE_ENV=production
+        RUN pnpm --filter @shopmind/contracts build && pnpm --filter web build
+        EXPOSE 3000
+        CMD ["pnpm", "--filter", "web", "start"]
+    restart: unless-stopped
+    environment:
+      SHOPMIND_API_BASE_URL: http://api:4000/api/v1
+      NODE_ENV: production
+    ports:
+      - "${DEV_WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+volumes:
+  postgres_dev_data:
