@@ -1,0 +1,66 @@
+# =========================================================================
+# SYSTEM SPECIFIC & SECURITY BOUNDARIES
+# =========================================================================
+/docs/
+
+.cursorrules
+.clinerules
+ai.md
+
+.env
+.env.*
+!.env.example
+
+# =========================================================================
+# DEPENDENCIES & MONOREPO
+# =========================================================================
+node_modules
+**/node_modules/
+.pnpm-debug.log*
+
+# Turborepo & Build cache artifacts
+.turbo
+.next
+/dist
+**/dist/
+/build
+**/build/
+
+# =========================================================================
+# APPLICATIONS SPECIFIC CACHES
+# =========================================================================
+
+# Next.js (apps/web)
+/apps/web/.next/
+/apps/web/out/
+/apps/web/build/
+
+# NestJS (apps/api)
+/apps/api/dist/
+/apps/api/build/
+
+*.db
+*.db-journal
+
+# =========================================================================
+# OPERATING SYSTEM & IDE CACHES
+# =========================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs settings
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
