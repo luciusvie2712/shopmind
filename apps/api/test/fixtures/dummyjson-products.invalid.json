@@ -1,0 +1,19 @@
+{
+  "products": [
+    {
+      "id": 900002,
+      "title": "Invalid Fixture",
+      "description": "Price and image are invalid.",
+      "category": "laptops",
+      "price": "not-a-number",
+      "rating": 9,
+      "stock": -1,
+      "tags": [],
+      "images": ["not-a-url"],
+      "reviews": []
+    }
+  ],
+  "total": 1,
+  "skip": 0,
+  "limit": 1
+}

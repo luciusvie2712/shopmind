@@ -1,0 +1,29 @@
+{
+  "products": [
+    {
+      "id": 900001,
+      "title": "Phase Three Laptop",
+      "description": "A deterministic ingestion fixture.",
+      "category": "laptops",
+      "price": 999.99,
+      "rating": 4.5,
+      "stock": 12,
+      "brand": "ShopMind Test",
+      "sku": "PHASE3-001",
+      "tags": ["development", "portable"],
+      "thumbnail": "https://example.com/products/900001/thumb.jpg",
+      "images": ["https://example.com/products/900001/image.jpg"],
+      "reviews": [
+        {
+          "rating": 5,
+          "comment": "Reliable fixture review",
+          "date": "2026-01-01T00:00:00.000Z",
+          "reviewerName": "Phase Three Reviewer"
+        }
+      ]
+    }
+  ],
+  "total": 1,
+  "skip": 0,
+  "limit": 1
+}
