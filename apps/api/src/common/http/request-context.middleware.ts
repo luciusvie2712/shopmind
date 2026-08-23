@@ -7,6 +7,7 @@ const REQUEST_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 
 export type RequestWithId = Request & {
   requestId: string;
+  user?: { readonly id: string };
 };
 
 function isValidRequestId(value: string | undefined): value is string {
@@ -20,8 +21,9 @@ export function createRequestContextMiddleware(logger: LoggerService) {
       ? suppliedRequestId
       : randomUUID();
     const startedAt = process.hrtime.bigint();
+    const requestWithId = request as RequestWithId;
 
-    (request as RequestWithId).requestId = requestId;
+    requestWithId.requestId = requestId;
     response.setHeader(REQUEST_ID_HEADER, requestId);
     response.once('finish', () => {
       const elapsedNanoseconds = process.hrtime.bigint() - startedAt;
@@ -29,6 +31,9 @@ export function createRequestContextMiddleware(logger: LoggerService) {
 
       logger.log({
         requestId,
+        ...(requestWithId.user === undefined
+          ? {}
+          : { userId: requestWithId.user.id }),
         route: request.path,
         method: request.method,
         statusCode: response.statusCode,

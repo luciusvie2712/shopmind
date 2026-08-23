@@ -1,4 +1,8 @@
 import { Module } from '@nestjs/common';
+import { CatalogCacheModule } from './common/cache/catalog-cache.module';
+import { PrismaModule } from './common/database/prisma.module';
+import { QueueModule } from './common/queue/queue.module';
+import { RedisModule } from './common/redis/redis.module';
 import { AiModule } from './modules/ai/ai.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CartModule } from './modules/cart/cart.module';
@@ -13,6 +17,10 @@ import { WishlistModule } from './modules/wishlist/wishlist.module';
 
 @Module({
   imports: [
+    CatalogCacheModule,
+    PrismaModule,
+    QueueModule,
+    RedisModule,
     AiModule,
     AuthModule,
     CartModule,

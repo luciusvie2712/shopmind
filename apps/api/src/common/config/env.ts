@@ -1,10 +1,29 @@
 import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { parseEnvironment } from './env.schema';
 
-const rootEnvironmentPath = resolve(__dirname, '../../../../../.env');
+function findWorkspaceRoot(startPath: string): string | undefined {
+  let currentPath = resolve(startPath);
 
-if (existsSync(rootEnvironmentPath)) {
+  while (true) {
+    if (existsSync(resolve(currentPath, 'pnpm-workspace.yaml'))) {
+      return currentPath;
+    }
+
+    const parentPath = dirname(currentPath);
+    if (parentPath === currentPath) {
+      return undefined;
+    }
+    currentPath = parentPath;
+  }
+}
+
+const workspaceRoot =
+  findWorkspaceRoot(process.cwd()) ?? findWorkspaceRoot(__dirname);
+const rootEnvironmentPath =
+  workspaceRoot === undefined ? undefined : resolve(workspaceRoot, '.env');
+
+if (rootEnvironmentPath !== undefined && existsSync(rootEnvironmentPath)) {
   process.loadEnvFile(rootEnvironmentPath);
 }
 

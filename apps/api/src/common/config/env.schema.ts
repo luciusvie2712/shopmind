@@ -28,7 +28,7 @@ const environmentSchema = z
   .object({
     DATABASE_URL: databaseUrl,
     REDIS_URL: redisUrl,
-    JWT_ACCESS_SECRET: nonEmptyString.optional(),
+    JWT_ACCESS_SECRET: nonEmptyString,
     JWT_ACCESS_TTL: z
       .string()
       .regex(/^[1-9]\d*(?:ms|s|m|h|d)$/, 'must be a positive duration')
@@ -68,19 +68,31 @@ const environmentSchema = z
       return;
     }
 
-    if (environment.JWT_ACCESS_SECRET === undefined) {
-      context.addIssue({
-        code: 'custom',
-        message: 'is required in production',
-        path: ['JWT_ACCESS_SECRET'],
-      });
-    }
-
     if (environment.GEMINI_API_KEY === undefined) {
       context.addIssue({
         code: 'custom',
         message: 'is required in production',
         path: ['GEMINI_API_KEY'],
+      });
+    }
+
+    if (!environment.COOKIE_SECURE) {
+      context.addIssue({
+        code: 'custom',
+        message: 'must be true in production',
+        path: ['COOKIE_SECURE'],
+      });
+    }
+
+    const webOrigin = new URL(environment.WEB_ORIGIN);
+    if (
+      webOrigin.protocol !== 'https:' ||
+      ['localhost', '127.0.0.1', '::1'].includes(webOrigin.hostname)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        message: 'must be a public HTTPS origin in production',
+        path: ['WEB_ORIGIN'],
       });
     }
   });
@@ -90,7 +102,7 @@ export interface AppConfig {
   readonly databaseUrl: string;
   readonly redisUrl: string;
   readonly auth: {
-    readonly accessSecret: string | undefined;
+    readonly accessSecret: string;
     readonly accessTtl: string;
     readonly refreshTokenTtlDays: number;
     readonly cookieSecure: boolean;
