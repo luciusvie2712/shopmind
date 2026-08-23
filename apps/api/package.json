@@ -12,17 +12,40 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
+    "start:prod": "node dist/main.js",
+    "worker:dev": "nest start --watch --entryFile worker",
+    "worker:start": "node dist/worker.js",
+    "catalog:bootstrap": "nest start --entryFile catalog-bootstrap",
+    "admin:grant": "nest start --entryFile admin-provision",
     "lint": "eslint \"src/**/*.ts\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "jest --runInBand",
+    "test:contract": "jest --runInBand --runTestsByPath src/modules/ingestion/dummy-json.schema.spec.ts src/modules/ingestion/dummy-json.client.spec.ts src/modules/ai/provider/gemini-ai.provider.spec.ts src/modules/ai/search-intent.schema.spec.ts src/modules/ai/recommendation.schema.spec.ts src/modules/ai/tools/tool-registry.spec.ts",
+    "test:integration": "node test/run-integration.cjs",
+    "test:e2e": "node test/run-integration.cjs",
+    "test:evaluation": "jest --config evaluation/jest-evaluation.json --runInBand",
+    "test:performance": "node test/run-performance.cjs",
+    "prisma:validate": "node --env-file-if-exists=../../.env node_modules/prisma/build/index.js validate --schema ../../prisma/schema.prisma",
+    "prisma:generate": "node --env-file-if-exists=../../.env node_modules/prisma/build/index.js generate --schema ../../prisma/schema.prisma",
+    "prisma:migrate:dev": "node --env-file-if-exists=../../.env node_modules/prisma/build/index.js migrate dev --schema ../../prisma/schema.prisma",
+    "prisma:migrate:deploy": "node --env-file-if-exists=../../.env node_modules/prisma/build/index.js migrate deploy --schema ../../prisma/schema.prisma"
   },
   "dependencies": {
+    "@google/genai": "^2.18.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
+    "@nestjs/jwt": "11.0.2",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.4.7",
+    "@prisma/client": "6.19.0",
+    "@shopmind/contracts": "workspace:*",
+    "argon2": "0.44.0",
+    "bullmq": "^6.2.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "cookie-parser": "1.4.7",
+    "ioredis": "5.7.0",
+    "prisma": "6.19.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "zod": "^4.4.3"
@@ -32,15 +55,38 @@
     "@eslint/js": "^9.18.0",
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
+    "@nestjs/testing": "11.1.6",
+    "@types/cookie-parser": "1.4.10",
     "@types/express": "^5.0.0",
+    "@types/jest": "29.5.14",
     "@types/node": "^24.0.0",
+    "@types/supertest": "6.0.3",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^17.0.0",
+    "jest": "29.7.0",
     "prettier": "^3.4.2",
+    "supertest": "7.1.4",
+    "ts-jest": "29.2.5",
     "ts-loader": "^9.5.2",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "testEnvironment": "node",
+    "setupFiles": [
+      "<rootDir>/../test/setup-env.ts"
+    ]
   }
 }

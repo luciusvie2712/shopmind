@@ -1,7 +1,8 @@
 # =========================================================================
 # SYSTEM SPECIFIC & SECURITY BOUNDARIES
 # =========================================================================
-/docs/
+/docs/*
+!/docs/08-worker-recovery-runbook.md
 
 .cursorrules
 .clinerules
@@ -32,8 +33,11 @@ node_modules
 
 # Next.js (apps/web)
 /apps/web/.next/
+/apps/web/.next-e2e/
 /apps/web/out/
 /apps/web/build/
+/apps/web/playwright-report/
+/apps/web/test-results/
 
 # NestJS (apps/api)
 /apps/api/dist/

@@ -21,6 +21,15 @@
     },
     "test:integration": {
       "dependsOn": ["^build", "^test:integration"],
+      "env": [
+        "DATABASE_URL",
+        "REDIS_URL",
+        "JWT_ACCESS_SECRET",
+        "JWT_ACCESS_TTL",
+        "REFRESH_TOKEN_TTL_DAYS",
+        "COOKIE_SECURE",
+        "NODE_ENV"
+      ],
       "outputs": ["coverage/**"]
     },
     "test:e2e": {

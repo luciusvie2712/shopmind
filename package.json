@@ -14,9 +14,11 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:integration": "turbo run test:integration",
-    "test:e2e": "turbo run test:e2e"
+    "test:e2e": "node scripts/run-e2e.cjs"
   },
   "devDependencies": {
+    "@prisma/client": "6.19.0",
+    "prisma": "6.19.0",
     "turbo": "2.5.6"
   }
 }

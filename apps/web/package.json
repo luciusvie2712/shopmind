@@ -7,9 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "corepack pnpm --dir ../api build && node e2e/run-playwright.mjs"
   },
   "dependencies": {
+    "@shopmind/contracts": "workspace:*",
     "@tanstack/react-query": "^5.101.4",
     "clsx": "^2.1.1",
     "lucide-react": "^1.33.0",
@@ -24,6 +26,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@playwright/test": "1.55.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
