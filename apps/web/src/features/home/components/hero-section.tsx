@@ -19,10 +19,14 @@ export function HeroSection() {
   return (
     <section
       aria-labelledby="home-hero-title"
-      className="home-hero relative isolate flex min-h-[700px] items-start overflow-hidden border-b border-slate-200 bg-cover bg-center bg-no-repeat px-4 pb-12 pt-14 sm:px-6 sm:pt-16 lg:min-h-[740px] lg:px-10 lg:pt-20"
+      className="home-hero relative isolate flex min-h-[calc(100svh-72px)] items-center overflow-hidden bg-[#f7f8fc] bg-[length:100%_auto] bg-top bg-no-repeat px-4 py-12 sm:px-6 sm:py-16 lg:px-10 lg:py-20"
       style={{ backgroundImage: `url(${heroBackground.src})` }}
     >
       <div className="absolute inset-0 -z-10 bg-white/[0.06] max-sm:bg-white/50" aria-hidden="true" />
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-[28%] bg-gradient-to-b from-transparent via-white/75 to-white"
+        aria-hidden="true"
+      />
       <div className="mx-auto flex w-full max-w-[920px] flex-col items-center text-center">
         <div className="hero-enter hero-enter-1 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50/90 px-3 py-1.5 text-xs font-semibold text-indigo-700 shadow-sm backdrop-blur-sm sm:text-sm">
           <Sparkles className="size-4" aria-hidden="true" />
