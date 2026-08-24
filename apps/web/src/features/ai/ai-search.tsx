@@ -20,8 +20,11 @@ export const aiSearchFormSchema = z.object({
 
 type AiSearchFormValues = z.infer<typeof aiSearchFormSchema>;
 
-export function AiSearch() {
-  const form = useForm<AiSearchFormValues>({ defaultValues: { query: "" } });
+export function AiSearch({ initialQuery = "" }: { readonly initialQuery?: string }) {
+  const parsedInitialQuery = aiSearchFormSchema.shape.query.safeParse(initialQuery);
+  const form = useForm<AiSearchFormValues>({
+    defaultValues: { query: parsedInitialQuery.success ? parsedInitialQuery.data : "" },
+  });
   const search = useMutation({
     mutationFn: ({ query }: AiSearchFormValues) => aiSearch({ query }),
   });

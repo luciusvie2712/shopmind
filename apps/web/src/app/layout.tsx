@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -31,9 +32,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <div id="main-content" tabIndex={-1} className="min-w-0 flex-1">
             {children}
           </div>
-          <footer className="border-t border-slate-200 bg-white py-6 text-center text-sm text-slate-500">
-            Canonical product data served by ShopMind
-          </footer>
+          <SiteFooter />
         </Providers>
       </body>
     </html>
