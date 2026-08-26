@@ -97,8 +97,15 @@ for (const viewport of [
       await page.getByText("Menu", { exact: true }).click();
     }
 
-    await page.getByLabel("Keyword").fill("Developer");
-    await page.getByRole("button", { name: "Apply filters" }).click();
+    const catalogFilters =
+      viewport.name === "mobile"
+        ? page.getByLabel("Mobile catalog filters")
+        : page.getByLabel("Catalog filters", { exact: true });
+    if (viewport.name === "mobile") {
+      await page.getByRole("button", { name: "Filters" }).click();
+    }
+    await catalogFilters.getByLabel("Keyword").fill("Developer");
+    await catalogFilters.getByRole("button", { name: "Apply filters" }).click();
     await expect(page).toHaveURL(/q=Developer/);
     await expectNoPageOverflow(page);
 
@@ -122,7 +129,7 @@ for (const viewport of [
       hasText: "Phase 11 Developer Laptop",
     });
     await product.getByRole("button", { name: "Wishlist" }).click();
-    await product.getByRole("button", { name: "Add to cart" }).click();
+    await product.getByTitle("Add to cart").click();
     await page.getByRole("button", { name: "Compare selected" }).click();
     await expect(page.getByRole("table")).toBeVisible();
     await expectNoPageOverflow(page);
@@ -134,7 +141,9 @@ for (const viewport of [
     await page.goto("/cart");
     await page.getByRole("button", { name: "Create simulated order" }).click();
     await page.waitForURL("**/orders");
-    await expect(page.getByText("Phase 11 Developer Laptop")).toBeVisible();
+    await expect(
+      page.getByText("Phase 11 Developer Laptop").filter({ visible: true }),
+    ).toBeVisible();
     await expectNoPageOverflow(page);
 
     await page.goto("/assistant");
@@ -149,8 +158,10 @@ test("tablet layout and representative keyboard accessibility remain usable", as
   await page.setViewportSize({ width: 834, height: 1112 });
   await page.goto("/products?category=e2e-laptops");
   await expectNoPageOverflow(page);
-  await page.getByLabel("Keyword").focus();
-  await page.getByLabel("Keyword").fill("Developer");
+  await page.getByRole("button", { name: "Filters" }).click();
+  const catalogFilters = page.getByLabel("Mobile catalog filters");
+  await catalogFilters.getByLabel("Keyword").focus();
+  await catalogFilters.getByLabel("Keyword").fill("Developer");
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/q=Developer/);
 

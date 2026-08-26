@@ -16,10 +16,14 @@ export function ProductActions({
   product,
   compact = false,
   iconOnly = false,
+  quantity = 1,
+  fullWidth = false,
 }: {
   readonly product: ProductSummaryContract;
   readonly compact?: boolean;
   readonly iconOnly?: boolean;
+  readonly quantity?: number;
+  readonly fullWidth?: boolean;
 }) {
   const router = useRouter();
   const { user } = useAuth();
@@ -42,7 +46,7 @@ export function ProductActions({
     setMessage(undefined);
     setMessageIsError(false);
     try {
-      await cart.mutateAsync({ productId: product.id, quantity: 1 });
+      await cart.mutateAsync({ productId: product.id, quantity });
       setMessage("Added to cart");
     } catch (error) {
       setMessageIsError(true);
@@ -72,17 +76,23 @@ export function ProductActions({
 
   return (
     <div className={compact ? "mt-3" : "mt-8"}>
-      <div className={`flex flex-wrap gap-2 ${iconOnly ? "justify-end" : ""}`}>
+      <div className={`flex gap-2 ${fullWidth ? "flex-col" : "flex-wrap"} ${iconOnly ? "justify-end" : ""}`}>
         <button
           type="button"
-          aria-label={iconOnly ? `Add ${product.title} to cart` : undefined}
+          aria-label={
+            iconOnly
+              ? product.stock <= 0
+                ? `${product.title} is out of stock`
+                : `Add ${product.title} to cart`
+              : undefined
+          }
           title={product.stock <= 0 ? "Out of stock" : "Add to cart"}
           disabled={product.stock <= 0 || cart.isPending}
           onClick={() => void addToCart()}
           className={`${
             iconOnly
-              ? "grid size-9 place-items-center rounded-lg border border-slate-200 bg-white p-0 text-slate-700"
-              : "inline-flex items-center gap-2 rounded-lg bg-slate-950 px-3 py-2 text-sm font-medium text-white"
+              ? "grid size-10 place-items-center rounded-xl border border-slate-200 bg-white p-0 text-slate-700 hover:border-teal-200 hover:text-teal-700"
+              : `btn-primary px-3 ${fullWidth ? "w-full" : ""}`
           } transition duration-200 hover:-translate-y-0.5 hover:shadow-sm active:scale-[0.94] disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transform-none`}
         >
           <ShoppingCart className="size-4" aria-hidden="true" />
@@ -109,8 +119,8 @@ export function ProductActions({
           onClick={() => void toggleWishlist()}
           className={`${
             iconOnly
-              ? "grid size-9 place-items-center rounded-lg border border-slate-200 bg-white p-0 text-slate-700"
-              : "inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800"
+              ? "grid size-10 place-items-center rounded-xl border border-slate-200 bg-white p-0 text-slate-700"
+              : `btn-secondary px-3 ${fullWidth ? "w-full" : ""}`
           } transition duration-200 hover:-translate-y-0.5 hover:border-rose-200 hover:text-rose-600 hover:shadow-sm active:scale-[0.94] disabled:cursor-wait disabled:opacity-50 motion-reduce:transform-none`}
         >
           <Heart
@@ -120,9 +130,9 @@ export function ProductActions({
           {iconOnly ? (
             <span className="sr-only">{saved ? "Saved" : "Wishlist"}</span>
           ) : saved ? (
-            "Saved"
+            "Saved to wishlist"
           ) : (
-            "Wishlist"
+            "Add to wishlist"
           )}
         </button>
       </div>

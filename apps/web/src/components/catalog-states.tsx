@@ -12,7 +12,7 @@ export function ApiUnavailableState({ requestId }: { requestId?: string }) {
         aria-hidden="true"
       />
       <h2 className="mt-4 text-lg font-semibold text-amber-950">
-        The catalog is temporarily unavailable
+        We couldn&apos;t load products right now
       </h2>
       <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-amber-800">
         ShopMind could not reach the product service. Your filters are still in
@@ -25,7 +25,7 @@ export function ApiUnavailableState({ requestId }: { requestId?: string }) {
       ) : null}
       <a
         href=""
-        className="mt-5 inline-flex items-center gap-2 rounded-lg bg-amber-900 px-4 py-2 text-sm font-medium text-white"
+        className="btn-danger mt-5 bg-amber-900 hover:bg-amber-800"
       >
         <RefreshCw className="size-4" aria-hidden="true" />
         Try again
@@ -54,12 +54,14 @@ export function EmptyCatalogState({
           : "Products will appear here after the catalog has been imported."}
       </p>
       {filtered ? (
-        <Link
-          href="/products"
-          className="mt-5 inline-flex rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50"
-        >
-          Clear all filters
-        </Link>
+        <div className="mt-5 flex flex-wrap justify-center gap-3">
+          <Link href="/products" className="btn-secondary">
+            Clear all filters
+          </Link>
+          <Link href="/search/ai" className="btn-ai">
+            Try AI Search
+          </Link>
+        </div>
       ) : null}
     </section>
   );

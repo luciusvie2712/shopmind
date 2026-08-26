@@ -75,7 +75,7 @@ export function SemanticSearch({
             aria-describedby={form.formState.errors.query ? "semantic-search-error" : undefined}
             maxLength={500}
             placeholder="Lightweight laptop for Docker development"
-            className="h-11 w-full rounded-lg border border-indigo-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            className="form-input-ai"
           />
         </label>
         <input
@@ -87,12 +87,12 @@ export function SemanticSearch({
           aria-label="Result limit"
           aria-invalid={form.formState.errors.limit !== undefined}
           aria-describedby={form.formState.errors.limit ? "semantic-search-error" : undefined}
-          className="h-11 w-24 rounded-lg border border-indigo-200 bg-white px-3 text-sm"
+          className="form-input-ai w-24"
         />
         <button
           type="submit"
           disabled={search.isPending}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-indigo-700 px-4 text-sm font-medium text-white hover:bg-indigo-600 disabled:cursor-wait disabled:opacity-60"
+          className="btn-ai h-11"
         >
           {search.isPending ? (
             <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />

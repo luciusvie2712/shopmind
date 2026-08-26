@@ -13,7 +13,7 @@ export default function ProductsError({
     console.error(error);
   }, [error]);
   return (
-    <main className="mx-auto max-w-7xl px-4 py-16">
+    <main className="page-shell">
       <div
         role="alert"
         className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center"
@@ -23,7 +23,7 @@ export default function ProductsError({
         </h1>
         <button
           onClick={reset}
-          className="mt-5 rounded-lg bg-red-900 px-4 py-2 text-sm font-medium text-white"
+          className="btn-danger mt-5"
         >
           Try again
         </button>
