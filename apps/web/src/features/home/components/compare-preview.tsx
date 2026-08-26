@@ -46,8 +46,8 @@ export function ComparePreview({
           <div>
             {state.status === "error" ? (
               <CompactDataState kind="error" message="Live comparison data is temporarily unavailable." requestId={state.requestId} />
-            ) : state.status === "empty" || products.length === 0 ? (
-              <CompactDataState kind="empty" message="No canonical products are available to compare." />
+            ) : state.status === "empty" || products.length < 2 ? (
+              <CompactDataState kind="empty" message="At least two canonical products are needed for this preview." />
             ) : (
               <ComparisonTable products={products} details={details} />
             )}

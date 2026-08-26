@@ -2,15 +2,55 @@
 
 import { ArrowRight, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
   heroSearchSchema,
   type HeroSearchValues,
 } from "@/features/home/schemas/hero-search.schema";
 
+const SEARCH_PLACEHOLDER =
+  "e.g., Find a laptop for backend development under $1200";
+
 export function HeroSearch() {
   const router = useRouter();
   const form = useForm<HeroSearchValues>({ defaultValues: { query: "" } });
+  const [animatedPlaceholder, setAnimatedPlaceholder] = useState(
+    SEARCH_PLACEHOLDER,
+  );
+
+  useEffect(() => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (reducedMotion.matches) {
+      return;
+    }
+
+    let characterIndex = 0;
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    function typeNextCharacter(): void {
+      characterIndex += 1;
+      setAnimatedPlaceholder(SEARCH_PLACEHOLDER.slice(0, characterIndex));
+
+      if (characterIndex < SEARCH_PLACEHOLDER.length) {
+        timeoutId = setTimeout(typeNextCharacter, 48);
+        return;
+      }
+
+      timeoutId = setTimeout(() => {
+        setAnimatedPlaceholder("");
+        characterIndex = 0;
+        timeoutId = setTimeout(typeNextCharacter, 420);
+      }, 1_450);
+    }
+
+    timeoutId = setTimeout(() => {
+      setAnimatedPlaceholder("");
+      timeoutId = setTimeout(typeNextCharacter, 360);
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   function submit(values: HeroSearchValues): void {
     const parsed = heroSearchSchema.safeParse(values);
@@ -44,7 +84,7 @@ export function HeroSearch() {
           aria-describedby={
             form.formState.errors.query ? "hero-ai-query-error" : undefined
           }
-          placeholder="e.g., Find a laptop for backend development under $1200"
+          placeholder={animatedPlaceholder}
           className="min-w-0 flex-1 bg-transparent px-3 text-sm text-slate-950 outline-none placeholder:text-slate-500 sm:px-4 sm:text-base"
         />
         <button

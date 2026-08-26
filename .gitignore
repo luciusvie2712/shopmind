@@ -38,6 +38,7 @@ node_modules
 /apps/web/build/
 /apps/web/playwright-report/
 /apps/web/test-results/
+/apps/web/debug.log
 
 # NestJS (apps/api)
 /apps/api/dist/

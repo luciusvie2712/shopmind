@@ -6,6 +6,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import heroBackground from "@/assets/bg-hero-section.png";
 import { HeroSearch } from "@/features/home/components/hero-search";
 
@@ -14,6 +15,8 @@ const trustIndicators = [
   { label: "Canonical product data", icon: Database },
   { label: "Trust & transparency", icon: ShieldCheck },
 ] as const;
+
+const animatedTitle = "faster with AI";
 
 export function HeroSection() {
   return (
@@ -37,8 +40,20 @@ export function HeroSection() {
           className="hero-enter hero-enter-2 mt-6 max-w-[900px] text-[2.55rem] font-extrabold leading-[1.06] tracking-[-0.045em] text-slate-950 sm:text-6xl lg:text-[4.25rem]"
         >
           Find the right products,
-          <span className="mt-1 block bg-gradient-to-r from-teal-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
-            faster with AI
+          <span
+            aria-label={animatedTitle}
+            className="mt-1 block"
+          >
+            {Array.from(animatedTitle).map((character, index) => (
+              <span
+                key={`${character}-${index}`}
+                aria-hidden="true"
+                className="hero-title-letter inline-block"
+                style={{ "--hero-letter-index": index } as CSSProperties}
+              >
+                {character === " " ? "\u00A0" : character}
+              </span>
+            ))}
           </span>
         </h1>
         <p className="hero-enter hero-enter-3 mt-6 max-w-[680px] text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">

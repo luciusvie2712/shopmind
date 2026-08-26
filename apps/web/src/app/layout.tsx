@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { BackToTop } from "@/components/back-to-top";
+import { QuickContact } from "@/components/quick-contact";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import "./globals.css";
@@ -19,12 +21,12 @@ type RootLayoutProps = Readonly<{
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" className="h-full antialiased" data-scroll-behavior="smooth">
       <body className="flex min-h-full flex-col">
         <Providers>
           <a
             href="#main-content"
-            className="sr-only z-50 rounded-lg bg-slate-950 px-4 py-2 text-sm font-medium text-white focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+            className="btn-primary sr-only z-50 focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
           >
             Skip to content
           </a>
@@ -33,6 +35,8 @@ export default function RootLayout({ children }: RootLayoutProps) {
             {children}
           </div>
           <SiteFooter />
+          <QuickContact />
+          <BackToTop />
         </Providers>
       </body>
     </html>

@@ -1,11 +1,13 @@
 "use client";
 
-import Link from "next/link";
+import { CircleAlert, LoaderCircle, Mail, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { ApiClientError, registerUser } from "@/lib/api/client";
+import { AuthField } from "./auth-field";
 import { registerFormSchema, type RegisterFormValues } from "./auth.schemas";
+import { PasswordField } from "./password-field";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -17,11 +19,12 @@ export function RegisterForm() {
     setFocus,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>();
-  const formErrorRef = useRef<HTMLParagraphElement>(null);
+  const formErrorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (formError) formErrorRef.current?.focus();
   }, [formError]);
+
   const submit = handleSubmit(async (values) => {
     setFormError(undefined);
     const parsed = registerFormSchema.safeParse(values);
@@ -37,6 +40,7 @@ export function RegisterForm() {
       if (firstInvalidField) setFocus(firstInvalidField);
       return;
     }
+
     try {
       await registerUser(parsed.data);
       router.replace("/login");
@@ -46,84 +50,92 @@ export function RegisterForm() {
       );
     }
   });
+
   return (
     <form
+      noValidate
       onSubmit={submit}
-      className="space-y-5 rounded-2xl border border-slate-200 bg-white p-7 shadow-sm"
+      aria-busy={isSubmitting}
+      className="space-y-5"
     >
-      <Field htmlFor="register-name" errorId="register-name-error" label="Name" error={errors.name?.message}>
+      <AuthField
+        htmlFor="register-name"
+        errorId="register-name-error"
+        label="Name"
+        error={errors.name?.message}
+        icon={UserRound}
+      >
         <input
           id="register-name"
           autoComplete="name"
+          disabled={isSubmitting}
           {...register("name")}
           aria-invalid={errors.name !== undefined}
           aria-describedby={errors.name ? "register-name-error" : undefined}
-          className="form-input"
+          className="form-input mt-0 h-12 pl-10 aria-invalid:border-red-500 aria-invalid:ring-4 aria-invalid:ring-red-100"
         />
-      </Field>
-      <Field htmlFor="register-email" errorId="register-email-error" label="Email" error={errors.email?.message}>
+      </AuthField>
+
+      <AuthField
+        htmlFor="register-email"
+        errorId="register-email-error"
+        label="Email"
+        error={errors.email?.message}
+        icon={Mail}
+      >
         <input
           id="register-email"
           type="email"
           autoComplete="email"
+          disabled={isSubmitting}
           {...register("email")}
           aria-invalid={errors.email !== undefined}
           aria-describedby={errors.email ? "register-email-error" : undefined}
-          className="form-input"
+          className="form-input mt-0 h-12 pl-10 aria-invalid:border-red-500 aria-invalid:ring-4 aria-invalid:ring-red-100"
         />
-      </Field>
-      <Field htmlFor="register-password" errorId="register-password-error" label="Password" error={errors.password?.message}>
-        <input
-          id="register-password"
-          type="password"
-          autoComplete="new-password"
-          {...register("password")}
-          aria-invalid={errors.password !== undefined}
-          aria-describedby={errors.password ? "register-password-error" : undefined}
-          className="form-input"
-        />
-      </Field>
-      {formError ? (
-        <p ref={formErrorRef} role="alert" tabIndex={-1} className="text-sm text-red-700 outline-none">
-          {formError}
-        </p>
-      ) : null}
-      <button
-        disabled={isSubmitting}
-        className="w-full rounded-lg bg-slate-950 px-4 py-3 text-sm font-medium text-white disabled:opacity-60"
-      >
-        {isSubmitting ? "Creating account..." : "Create account"}
-      </button>
-      <p className="text-center text-sm text-slate-600">
-        Already registered?{" "}
-        <Link href="/login" className="font-medium text-slate-950">
-          Sign in
-        </Link>
-      </p>
-    </form>
-  );
-}
+      </AuthField>
 
-function Field({
-  htmlFor,
-  errorId,
-  label,
-  error,
-  children,
-}: {
-  readonly htmlFor: string;
-  readonly errorId: string;
-  readonly label: string;
-  readonly error?: string;
-  readonly children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label htmlFor={htmlFor} className="text-sm font-medium text-slate-700">{label}</label>
-      {children}
-      {error ? (
-        <span id={errorId} className="mt-1 block text-xs text-red-700">{error}</span>
+      <PasswordField
+        id="register-password"
+        autoComplete="new-password"
+        disabled={isSubmitting}
+        registration={register("password")}
+        error={errors.password?.message}
+      />
+
+      {formError ? (
+        <div
+          ref={formErrorRef}
+          role="alert"
+          tabIndex={-1}
+          className="flex gap-2.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-800 outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+        >
+          <CircleAlert
+            className="mt-0.5 size-4 shrink-0"
+            aria-hidden="true"
+          />
+          <span>{formError}</span>
+        </div>
       ) : null}
-    </div>
+
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        aria-busy={isSubmitting}
+        className="btn-primary min-h-12 w-full active:scale-[0.98]"
+      >
+        {isSubmitting ? (
+          <>
+            <LoaderCircle
+              className="size-4 animate-spin motion-reduce:animate-none"
+              aria-hidden="true"
+            />
+            Creating account...
+          </>
+        ) : (
+          "Create account"
+        )}
+      </button>
+    </form>
   );
 }

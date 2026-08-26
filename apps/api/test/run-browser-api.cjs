@@ -13,7 +13,6 @@ async function main() {
   await prepare();
   Object.assign(process.env, testEnvironment, {
     API_PORT: '4011',
-    REDIS_URL: 'redis://localhost:6380/15',
     WEB_ORIGIN: 'http://localhost:3011',
   });
   require('../dist/src/main.js');
