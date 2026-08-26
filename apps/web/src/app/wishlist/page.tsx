@@ -1,55 +1,38 @@
 "use client";
 
+import { ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { ProtectedRoute } from "@/features/auth/protected-route";
-import { ProductGrid } from "@/features/products/product-grid";
-import { useWishlistQuery } from "@/features/wishlist/wishlist.queries";
+import { TrustSection } from "@/features/home/components/trust-section";
+import { WishlistPageContent } from "@/features/wishlist/wishlist-page-content";
+import { WishlistPageSkeleton } from "@/features/wishlist/wishlist-page-skeleton";
 
 export default function WishlistPage() {
   return (
-    <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-      <ProtectedRoute>
-        <WishlistContent />
-      </ProtectedRoute>
-    </main>
-  );
-}
-
-function WishlistContent() {
-  const wishlist = useWishlistQuery();
-  if (wishlist.isPending)
-    return <div role="status" aria-label="Wishlist loading" className="h-72 animate-pulse rounded-2xl bg-slate-200" />;
-  if (wishlist.isError)
-    return (
-      <section
-        role="alert"
-        className="rounded-2xl border border-red-200 bg-red-50 p-8"
-      >
-        <p>Wishlist is temporarily unavailable.</p>
-        <button
-          onClick={() => void wishlist.refetch()}
-          className="mt-4 rounded-lg bg-red-900 px-4 py-2 text-sm text-white"
-        >
-          Try again
-        </button>
-      </section>
-    );
-  return (
-    <>
-      <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-        Wishlist
-      </h1>
-      <div className="mt-8">
-        {wishlist.data.items.length === 0 ? (
-          <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-            <h2 className="text-xl font-semibold">No saved products yet</h2>
-            <p className="mt-2 text-sm text-slate-600">
-              Use the wishlist action on a product to save it here.
-            </p>
-          </section>
-        ) : (
-          <ProductGrid products={wishlist.data.items} />
-        )}
+    <main className="overflow-x-clip bg-white/70">
+      <div className="page-shell pt-6 sm:pt-7 lg:pt-8">
+        <ProtectedRoute loadingFallback={<WishlistPageSkeleton />}>
+          <nav
+            aria-label="Breadcrumb"
+            className="hero-enter hero-enter-1 flex items-center gap-2 text-xs font-medium text-slate-500"
+          >
+            <Link href="/" className="transition-colors hover:text-teal-700">
+              Home
+            </Link>
+            <ChevronRight className="size-3.5" aria-hidden="true" />
+            <span aria-current="page" className="text-slate-700">
+              Wishlist
+            </span>
+          </nav>
+          <header className="hero-enter hero-enter-2 mt-5">
+            <h1 className="page-title mt-0">Wishlist</h1>
+          </header>
+          <div className="hero-enter hero-enter-3 mt-8">
+            <WishlistPageContent />
+          </div>
+        </ProtectedRoute>
       </div>
-    </>
+      <TrustSection />
+    </main>
   );
 }
