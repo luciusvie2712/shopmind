@@ -2,8 +2,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, LoaderCircle, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { ApiClientError, compareProducts } from "@/lib/api/client";
+import { CompareSkeleton } from "./compare-skeleton";
+import { CompareWorkspace } from "./compare-workspace";
 
 const compareIdsSchema = z
   .array(z.string().uuid())
@@ -21,32 +25,51 @@ export function parseCompareIds(rawIds: string | undefined) {
 }
 
 export function CompareView({ rawIds }: { readonly rawIds?: string }) {
+  const router = useRouter();
   const parsed = parseCompareIds(rawIds);
+  const productIds = parsed.success ? parsed.data : [];
   const comparison = useQuery({
-    queryKey: ["ai-compare", parsed.success ? parsed.data : []],
-    queryFn: () => compareProducts({ productIds: parsed.success ? parsed.data : [] }),
+    queryKey: ["ai-compare", productIds],
+    queryFn: () => compareProducts({ productIds }),
     enabled: parsed.success,
     retry: false,
+    staleTime: Number.POSITIVE_INFINITY,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
   if (!parsed.success) {
     return (
-      <section role="alert" className="rounded-2xl border border-amber-300 bg-amber-50 p-8">
-        <h2 className="font-semibold text-amber-950">Invalid comparison selection</h2>
-        <p className="mt-2 text-sm text-amber-900">
-          {parsed.error.issues[0]?.message ?? "Choose 2–4 unique products."}
-        </p>
+      <section
+        role="alert"
+        className="surface-card border-amber-200 bg-amber-50/80 p-6 sm:p-8"
+      >
+        <div className="flex items-start gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-800">
+            <AlertTriangle className="size-5" aria-hidden="true" />
+          </span>
+          <div>
+            <h2 className="font-bold text-amber-950">
+              Invalid comparison selection
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-amber-900">
+              {parsed.error.issues[0]?.message ??
+                "Choose 2–4 unique products."}
+            </p>
+            <Link href="/products" className="btn-secondary mt-4">
+              Choose products
+            </Link>
+          </div>
+        </div>
       </section>
     );
   }
+
   if (comparison.isPending) {
-    return (
-      <div aria-label="Comparison loading" className="space-y-4">
-        <LoaderCircle className="size-6 animate-spin text-indigo-700" />
-        <div className="h-72 animate-pulse rounded-2xl bg-slate-200" />
-      </div>
-    );
+    return <CompareSkeleton productCount={productIds.length} />;
   }
+
   if (comparison.isError) {
     const error = comparison.error;
     const message =
@@ -55,96 +78,56 @@ export function CompareView({ rawIds }: { readonly rawIds?: string }) {
         : error instanceof ApiClientError && error.code === "API_UNAVAILABLE"
           ? "The ShopMind API is unavailable."
           : "Comparison could not be loaded.";
+
     return (
-      <section role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-8">
-        <p className="flex items-center gap-2 text-red-900">
-          <AlertTriangle className="size-4" aria-hidden="true" /> {message}
-        </p>
-        <button
-          type="button"
-          onClick={() => void comparison.refetch()}
-          className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-red-800"
-        >
-          <RefreshCw className="size-4" aria-hidden="true" /> Retry
-        </button>
+      <section
+        role="alert"
+        className="surface-card border-red-200 bg-red-50/80 p-6 sm:p-8"
+      >
+        <div className="flex items-start gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-red-100 text-red-800">
+            <AlertTriangle className="size-5" aria-hidden="true" />
+          </span>
+          <div>
+            <h2 className="font-bold text-red-950">Comparison unavailable</h2>
+            <p className="mt-1 text-sm leading-6 text-red-900">{message}</p>
+            <button
+              type="button"
+              onClick={() => void comparison.refetch()}
+              disabled={comparison.isFetching}
+              className="btn-secondary mt-4 border-red-200 text-red-900 hover:border-red-300 hover:text-red-800"
+            >
+              {comparison.isFetching ? (
+                <LoaderCircle
+                  className="size-4 animate-spin motion-reduce:animate-none"
+                  aria-hidden="true"
+                />
+              ) : (
+                <RefreshCw className="size-4" aria-hidden="true" />
+              )}
+              {comparison.isFetching ? "Retrying..." : "Retry"}
+            </button>
+          </div>
+        </div>
       </section>
     );
   }
 
-  return (
-    <div className="space-y-8">
-      <div
-        role="region"
-        aria-label="Product comparison table"
-        tabIndex={0}
-        className="overflow-x-auto rounded-2xl border border-slate-200 bg-white"
-      >
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <caption className="sr-only">
-            Canonical facts for the selected ShopMind products
-          </caption>
-          <thead className="bg-slate-50">
-            <tr>
-              <th className="px-4 py-3 text-left">Fact</th>
-              {comparison.data.products.map((product) => (
-                <th key={product.id} className="min-w-48 px-4 py-3 text-left">
-                  {product.title}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            <ComparisonRow label="Brand" values={comparison.data.products.map((p) => p.brand ?? "Unknown")} />
-            <ComparisonRow label="Category" values={comparison.data.products.map((p) => p.category.name)} />
-            <ComparisonRow label="Price" values={comparison.data.products.map((p) => `$${p.price.toFixed(2)}`)} />
-            <ComparisonRow label="Rating" values={comparison.data.products.map((p) => p.rating.toFixed(1))} />
-            <ComparisonRow label="Stock" values={comparison.data.products.map((p) => String(p.stock))} />
-          </tbody>
-        </table>
-      </div>
+  function removeProduct(productId: string): void {
+    const remainingIds = productIds.filter((id) => id !== productId);
+    router.push(
+      remainingIds.length > 0
+        ? `/compare?ids=${remainingIds.join(",")}`
+        : "/compare",
+    );
+  }
 
-      {comparison.data.status === "success" && comparison.data.summary ? (
-        <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-6">
-          <h2 className="font-semibold text-indigo-950">Grounded AI summary</h2>
-          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">
-            {comparison.data.summary}
-          </p>
-        </section>
-      ) : (
-        <section className="rounded-2xl border border-amber-300 bg-amber-50 p-6">
-          <h2 className="font-semibold text-amber-950">AI summary unavailable</h2>
-          <p className="mt-2 text-sm text-amber-900">
-            Canonical comparison facts remain available. No summary was fabricated.
-          </p>
-          <button
-            type="button"
-            onClick={() => void comparison.refetch()}
-            className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-amber-900"
-          >
-            <RefreshCw className="size-4" aria-hidden="true" /> Retry summary
-          </button>
-        </section>
-      )}
-      <p className="text-xs text-slate-400">Request ID: {comparison.data.requestId}</p>
-    </div>
-  );
-}
-
-function ComparisonRow({
-  label,
-  values,
-}: {
-  readonly label: string;
-  readonly values: readonly string[];
-}) {
   return (
-    <tr>
-      <th className="bg-slate-50 px-4 py-3 text-left font-medium text-slate-700">{label}</th>
-      {values.map((value, index) => (
-        <td key={`${label}-${index}`} className="px-4 py-3 text-slate-700">
-          {value}
-        </td>
-      ))}
-    </tr>
+    <CompareWorkspace
+      comparison={comparison.data}
+      isRefreshing={comparison.isFetching}
+      onRemoveProduct={removeProduct}
+      onRetrySummary={() => void comparison.refetch()}
+    />
   );
 }
