@@ -210,6 +210,122 @@ describe('Phase 6 semantic integration', () => {
     return job;
   }
 
+  async function importAndCompleteEmbeddings() {
+    await ingestionService.importProducts();
+    const products = await prisma.product.findMany({
+      where: { source: 'dummyjson', externalId: { in: ['960001', '960002'] } },
+      orderBy: { externalId: 'asc' },
+    });
+    for (const product of products) {
+      await completed(
+        embeddingQueue,
+        embeddingEvents,
+        embeddingJobId({
+          productId: product.id,
+          contentHash: product.contentHash,
+        }),
+      );
+    }
+    return products;
+  }
+
+  it('skips provider work when a completed job was removed and the same version is enqueued again', async () => {
+    const [product] = await importAndCompleteEmbeddings();
+    const data = { productId: product.id, contentHash: product.contentHash };
+    const id = embeddingJobId(data);
+    const original = await embeddingQueue.getJob(id);
+    if (original === undefined)
+      throw new Error('Expected completed embedding job');
+    const before = await prisma.productEmbedding.findUniqueOrThrow({
+      where: { productId: product.id },
+      select: { contentHash: true, updatedAt: true },
+    });
+    const providerCalls = jest.mocked(embeddingProvider.embedText).mock.calls
+      .length;
+    await original.remove();
+    await queueService.enqueueEmbedProduct(data);
+    await queueService.enqueueEmbedProduct(data);
+    await completed(embeddingQueue, embeddingEvents, id);
+    expect(jest.mocked(embeddingProvider.embedText)).toHaveBeenCalledTimes(
+      providerCalls,
+    );
+    expect(
+      await prisma.productEmbedding.findUniqueOrThrow({
+        where: { productId: product.id },
+        select: { contentHash: true, updatedAt: true },
+      }),
+    ).toEqual(before);
+  });
+
+  it.each(['changed', 'missing'])(
+    'rejects a late provider result after its canonical product becomes %s',
+    async (state) => {
+      const [product] = await importAndCompleteEmbeddings();
+      const oldJob = await embeddingQueue.getJob(
+        embeddingJobId({
+          productId: product.id,
+          contentHash: product.contentHash,
+        }),
+      );
+      if (oldJob === undefined)
+        throw new Error('Expected original embedding job');
+      await prisma.productEmbedding.delete({
+        where: { productId: product.id },
+      });
+
+      const provider = {
+        embedText: jest.fn(async () => {
+          const next = payload(
+            'Updated while the old provider request is pending',
+          );
+          if (state === 'missing') {
+            next.products = next.products.slice(1);
+            next.total = 1;
+            next.limit = 1;
+          }
+          dummyJsonClient.fetchProducts.mockResolvedValue(next);
+          await ingestionService.importProducts();
+          if (state === 'changed') {
+            const current = await prisma.product.findUniqueOrThrow({
+              where: { id: product.id },
+            });
+            await completed(
+              embeddingQueue,
+              embeddingEvents,
+              embeddingJobId({
+                productId: current.id,
+                contentHash: current.contentHash,
+              }),
+            );
+          }
+          return unitVector(1);
+        }),
+      };
+      const delayedProcessor = new EmbedProductProcessor(
+        embeddingRepository,
+        provider,
+      );
+      await expect(delayedProcessor.process(oldJob)).resolves.toBe('stale');
+      expect(provider.embedText).toHaveBeenCalledTimes(1);
+      const current = await prisma.product.findUniqueOrThrow({
+        where: { id: product.id },
+        include: { embedding: { select: { contentHash: true } } },
+      });
+      if (state === 'changed') {
+        expect(current.contentHash).not.toBe(product.contentHash);
+        expect(current.embedding?.contentHash).toBe(current.contentHash);
+        const rows = await prisma.$queryRaw<Array<{ similarity: number }>>`
+        SELECT 1 - (embedding <=> ${`[${unitVector(0).join(',')}]`}::vector) AS similarity
+        FROM product_embeddings WHERE product_id = ${product.id}::uuid
+      `;
+        expect(rows[0].similarity).toBe(1);
+      } else {
+        expect(current.sourceStatus).toBe('MISSING');
+        expect(current.embedding).toBeNull();
+      }
+    },
+  );
+
   it('processes BullMQ sync and idempotent embedding jobs from canonical data', async () => {
     const sync = await queueService.enqueueSyncProducts();
     await completed(ingestionQueue, ingestionEvents, sync.jobId);

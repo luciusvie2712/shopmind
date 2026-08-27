@@ -13,14 +13,17 @@ import {
 import { buildEmbeddingText } from './embedding-text.builder';
 import { ProductEmbeddingRepository } from './product-embedding.repository';
 
-export type EmbeddingJobDecision = 'process' | 'stale' | 'missing';
+export type EmbeddingJobDecision =
+  'process' | 'stale' | 'missing' | 'unchanged';
 
 export function decideEmbeddingJob(
   currentContentHash: string | undefined,
   jobContentHash: string,
+  embeddingContentHash?: string | null,
 ): EmbeddingJobDecision {
   if (currentContentHash === undefined) return 'missing';
-  return currentContentHash === jobContentHash ? 'process' : 'stale';
+  if (currentContentHash !== jobContentHash) return 'stale';
+  return embeddingContentHash === currentContentHash ? 'unchanged' : 'process';
 }
 
 @Injectable()
@@ -42,6 +45,7 @@ export class EmbedProductProcessor {
       const decision = decideEmbeddingJob(
         product?.contentHash,
         job.data.contentHash,
+        product?.embeddingContentHash,
       );
       if (decision !== 'process' || product === null) {
         this.log(job, decision, startedAt);
@@ -53,12 +57,16 @@ export class EmbedProductProcessor {
         await this.embeddingProvider.embedText(text),
         config.gemini.embeddingDimension,
       );
-      await this.repository.upsertEmbedding({
+      const persisted = await this.repository.upsertEmbedding({
         productId: product.id,
         vector,
         model: config.gemini.embeddingModel,
         contentHash: product.contentHash,
       });
+      if (!persisted) {
+        this.log(job, 'stale', startedAt);
+        return 'stale';
+      }
       this.log(job, 'success', startedAt);
       return decision;
     } catch (error) {

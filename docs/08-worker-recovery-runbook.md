@@ -93,3 +93,23 @@ Do not mark Phase 13 or the production reliability milestone complete until
 runtime SHAs, DB counts/hashes, worker completion, API/web catalog, semantic
 retrieval, ADMIN RBAC, and the full production smoke flow have been verified.
 An Admin Dashboard is outside this repair's scope.
+
+### Worker version safety
+
+The worker also skips provider work when PostgreSQL already has an embedding
+for the current content hash, even after BullMQ's completed-job retention ends.
+After a provider response, embedding persistence locks and rechecks the active
+canonical product/version in one parameterized SQL statement. A late result
+cannot overwrite a newer embedding or recreate an embedding for a now-missing
+product. No database lock is held while calling Gemini.
+
+### Codebase scope versus operator verification
+
+Local regression suites cover importer atomicity/recovery, deterministic jobs,
+duplicate delivery, late provider responses, PostgreSQL/pgvector retrieval,
+Redis/BullMQ processing and retry, and ADMIN ingestion RBAC. Provider boundaries
+are mocked in these tests; vectors and catalog fixtures are local test data.
+Production baseline counts, Northflank/Vercel deployment, live provider
+completion, production account provisioning, and public smoke tests remain
+operator-owned checks. Local PASS does not mark Phase 13 or the full MVP gate
+complete.

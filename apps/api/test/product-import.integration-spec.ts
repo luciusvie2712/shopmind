@@ -274,12 +274,12 @@ describe('Importer transaction lifecycle and recovery (real PostgreSQL)', () => 
     await ingestion.importProducts();
     await completeEmbeddings();
     const [row] = await records();
-    await embeddingRepository.upsertEmbedding({
-      productId: row.id,
-      contentHash: '0'.repeat(64),
-      model: 'regression-test',
-      vector: Array.from({ length: 768 }, (_, index) => (index === 0 ? 1 : 0)),
-    });
+    // Simulate a source update committed before its embedding job runs.
+    const changed = payload();
+    changed.products[0].description = 'A newer source version';
+    source.fetchProducts.mockResolvedValue(changed);
+    await ingestion.importProducts();
+    const [current] = await records();
     queue.enqueueEmbedProduct.mockClear();
     await expect(ingestion.importProducts()).resolves.toMatchObject({
       created: 0,
@@ -289,7 +289,7 @@ describe('Importer transaction lifecycle and recovery (real PostgreSQL)', () => 
     expect(queue.enqueueEmbedProduct).toHaveBeenCalledTimes(1);
     expect(queue.enqueueEmbedProduct).toHaveBeenCalledWith({
       productId: row.id,
-      contentHash: row.contentHash,
+      contentHash: current.contentHash,
     });
   });
 
