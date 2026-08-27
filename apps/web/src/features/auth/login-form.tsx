@@ -4,6 +4,7 @@ import { CircleAlert, LoaderCircle, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
+import { getErrorFeedback } from "@/lib/feedback";
 import { ApiClientError } from "@/lib/api/client";
 import { AuthField } from "./auth-field";
 import { useAuth } from "./auth-provider";
@@ -48,7 +49,9 @@ export function LoginForm() {
       router.replace("/products");
     } catch (error) {
       setFormError(
-        error instanceof ApiClientError ? error.message : "Unable to sign in",
+        error instanceof ApiClientError && error.code === "AUTH_REQUIRED"
+          ? "Check your email and password, then try again."
+          : `${getErrorFeedback(error).title}. ${getErrorFeedback(error).description}`,
       );
     }
   });

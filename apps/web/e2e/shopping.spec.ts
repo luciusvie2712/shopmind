@@ -12,7 +12,7 @@ test("auth, wishlist, cart, checkout, orders, and logout use the real API", asyn
   await product.getByTitle("Add to wishlist").click();
   await expect(product.getByTitle("Remove from wishlist")).toBeVisible();
   await product.getByTitle("Add to cart").click();
-  await expect(product.getByRole("status")).toHaveText("Added to cart");
+  await expect(page.locator('[data-sonner-toast][data-type="success"]').filter({ hasText: "Added to cart" })).toBeVisible();
 
   await page.goto("/wishlist");
   await expect(
@@ -92,7 +92,7 @@ test("failed optimistic wishlist mutation rolls back", async ({ page }) => {
   });
   await product.getByTitle("Add to wishlist").click();
   await expect(product.getByTitle("Add to wishlist")).toBeVisible();
-  await expect(product.getByRole("alert")).toHaveText("Controlled failure");
+  await expect(page.locator('[data-sonner-toast][data-type="error"]')).toContainText("Couldn’t update your wishlist");
 });
 
 test("failed optimistic wishlist removal restores the canonical item", async ({
@@ -128,8 +128,8 @@ test("failed optimistic wishlist removal restores the canonical item", async ({
   await expect(
     page.getByRole("link", { name: "Phase 11 Developer Laptop", exact: true }),
   ).toBeVisible();
-  await expect(page.locator("main").getByRole("alert")).toContainText(
-    "Controlled wishlist removal failure",
+  await expect(page.locator('[data-sonner-toast][data-type="error"]')).toContainText(
+    "Couldn’t update your wishlist",
   );
 });
 
@@ -226,8 +226,9 @@ test("failed optimistic cart mutation rolls back", async ({ page }) => {
     page.getByLabel("Quantity for Phase 11 Developer Laptop", { exact: true }),
   ).toHaveText("1");
   await expect(page.locator("main").getByRole("alert")).toContainText(
-    "restored to canonical server data",
+    "Stock changed",
   );
+  await expect(page.locator('[data-sonner-toast][data-type="success"]')).toHaveCount(0);
 });
 
 test("failed optimistic cart removal restores the canonical item", async ({ page }) => {
@@ -257,8 +258,8 @@ test("failed optimistic cart removal restores the canonical item", async ({ page
   await expect(
     page.getByRole("link", { name: "Phase 11 Developer Laptop", exact: true }),
   ).toBeVisible();
-  await expect(page.locator("main").getByRole("alert")).toContainText(
-    "Controlled remove failure",
+  await expect(page.locator('[data-sonner-toast][data-type="error"]')).toContainText(
+    "Couldn’t update your cart",
   );
 });
 

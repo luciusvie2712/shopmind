@@ -4,6 +4,78 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Keep Sonner's live region, keyboard handling and stacking mechanics. */
+[data-sonner-toast][data-styled="true"].shopmind-toast {
+  width: 100%;
+  padding: 16px 44px 16px 16px;
+  gap: 12px;
+  align-items: flex-start;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: white;
+  color: var(--foreground);
+  box-shadow: 0 6px 20px rgb(15 23 42 / 0.09);
+  transition: transform 200ms ease, opacity 200ms ease, height 200ms ease;
+}
+
+[data-sonner-toast][data-styled="true"].shopmind-toast [data-title] {
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+[data-sonner-toast][data-styled="true"].shopmind-toast [data-description] {
+  color: var(--muted-foreground);
+  line-height: 1.5;
+}
+
+[data-sonner-toast][data-styled="true"].shopmind-toast [data-close-button] {
+  top: 10px;
+  right: 8px;
+  left: auto;
+  width: 28px;
+  height: 28px;
+  transform: none;
+  border: 0;
+  border-radius: 8px;
+  background: white;
+  color: var(--muted-foreground);
+}
+
+[data-sonner-toast].shopmind-toast[data-mounted="false"] {
+  transform: translateY(-6px);
+}
+
+[data-sonner-toast].shopmind-toast[data-removed="true"][data-swipe-out="false"] {
+  transform: translateY(var(--offset)) translateX(6px);
+}
+
+.feedback-alert {
+  animation: feedback-enter 180ms ease-out both;
+}
+
+@keyframes feedback-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feedback-alert {
+    animation: none;
+  }
+
+  [data-sonner-toast].shopmind-toast,
+  [data-sonner-toast].shopmind-toast > * {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  [data-sonner-toast].shopmind-toast[data-mounted="false"],
+  [data-sonner-toast].shopmind-toast[data-removed="true"] {
+    transform: translateY(var(--offset));
+  }
+}
+
 /*
  * ShopMind visual system
  * Commerce actions use teal; AI-only actions use indigo. Neutral surfaces and

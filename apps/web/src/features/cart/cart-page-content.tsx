@@ -23,7 +23,8 @@ import {
   useUpdateCartItem,
 } from "./cart.queries";
 import { CartWorkspaceSkeleton } from "./cart-page-skeleton";
-import { ApiClientError } from "@/lib/api/client";
+import { FeedbackAlert } from "@/components/feedback/feedback-alert";
+import { getErrorFeedback } from "@/lib/feedback";
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -38,8 +39,21 @@ export function CartPageContent() {
   const checkout = useCheckout();
   const mutationError = update.error ?? remove.error ?? checkout.error;
 
+  function resetErrors(): void {
+    update.reset();
+    remove.reset();
+    checkout.reset();
+  }
+
+  const errorFeedback = mutationError ? getErrorFeedback(mutationError) : undefined;
+  const errorBanner = errorFeedback && (checkout.isError || errorFeedback.presentation === "inline")
+    ? <FeedbackAlert {...errorFeedback} className="mt-4" />
+    : null;
+
   if (cart.isPending) return <CartWorkspaceSkeleton />;
   if (cart.isError) {
+    const feedback = getErrorFeedback(cart.error);
+    if (feedback.presentation === "inline") return <FeedbackAlert {...feedback} />;
     return (
       <CartErrorState
         isRetrying={cart.isFetching}
@@ -47,9 +61,10 @@ export function CartPageContent() {
       />
     );
   }
-  if (cart.data.items.length === 0) return <CartEmptyState />;
+  if (cart.data.items.length === 0) return <><CartEmptyState />{errorBanner}</>;
 
   async function createOrder(): Promise<void> {
+    resetErrors();
     try {
       await checkout.mutateAsync();
       router.push("/orders");
@@ -82,14 +97,20 @@ export function CartPageContent() {
                 index={index}
                 updatePending={update.isPending}
                 removePending={remove.isPending}
-                onUpdate={(quantity) => update.mutate({ productId: item.product.id, quantity })}
-                onRemove={() => remove.mutate(item.product.id)}
+                onUpdate={(quantity) => {
+                  resetErrors();
+                  update.mutate({ productId: item.product.id, quantity });
+                }}
+                onRemove={() => {
+                  resetErrors();
+                  remove.mutate(item.product.id);
+                }}
               />
             ))}
           </div>
         </div>
 
-        {mutationError ? <CartMutationError error={mutationError} /> : null}
+        {errorBanner}
       </section>
 
       <CartSummary
@@ -247,26 +268,6 @@ function CartSummary({
         <p>Simulated checkout only. No payment will be processed.</p>
       </div>
     </aside>
-  );
-}
-
-function CartMutationError({ error }: { readonly error: unknown }) {
-  const apiError = error instanceof ApiClientError ? error : undefined;
-  const message =
-    apiError?.code === "OUT_OF_STOCK"
-      ? "Stock changed. The cart has been restored to canonical server data."
-      : error instanceof Error
-        ? error.message
-        : "Shopping operation failed.";
-
-  return (
-    <div role="alert" className="animate-in fade-in slide-in-from-bottom-1 mt-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 motion-reduce:animate-none">
-      <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-      <div>
-        <p className="font-semibold">{message}</p>
-        {apiError?.requestId ? <p className="mt-1 text-xs text-amber-800">Request ID: {apiError.requestId}</p> : null}
-      </div>
-    </div>
   );
 }
 

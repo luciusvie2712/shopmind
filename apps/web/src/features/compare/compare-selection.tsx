@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Reveal } from "@/components/ui/reveal";
 import { ProductCard } from "@/features/products/product-card";
+import { FeedbackAlert } from "@/components/feedback/feedback-alert";
 
 export function CompareSelection({
   products,
@@ -42,6 +43,9 @@ export function CompareSelection({
         </button>
       </div>
 
+      {selected.length === 4 ? (
+        <FeedbackAlert variant="warning" role="status" title="Comparison limit reached" description="You can compare up to 4 products. Remove one to select another." className="mb-4" />
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {products.map((product, index) => {
           const card = (

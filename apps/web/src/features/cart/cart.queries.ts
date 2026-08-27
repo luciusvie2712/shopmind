@@ -2,6 +2,7 @@
 
 import type { CartContract } from "@shopmind/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { notify, notifyMutationError } from "@/lib/feedback";
 import {
   addCartItem,
   checkoutCart,
@@ -27,7 +28,11 @@ export function useAddCartItem() {
       productId: string;
       quantity: number;
     }) => addCartItem(productId, quantity),
-    onSuccess: (cart) => queryClient.setQueryData(cartQueryKey, cart),
+    onSuccess: (cart, { productId }) => {
+      queryClient.setQueryData(cartQueryKey, cart);
+      notify(`cart:add:${productId}`, "success", "Added to cart");
+    },
+    onError: (error, { productId }) => notifyMutationError(error, `cart:add:${productId}`, "Couldn’t update your cart"),
     onSettled: () => queryClient.invalidateQueries({ queryKey: cartQueryKey }),
   });
 }
@@ -52,10 +57,12 @@ export function useUpdateCartItem() {
         );
       return { previous };
     },
-    onError: (_error, _input, context) => {
+    onError: (error, { productId }, context) => {
       if (context?.previous)
         queryClient.setQueryData(cartQueryKey, context.previous);
+      notifyMutationError(error, `cart:update:${productId}`, "Couldn’t update your cart");
     },
+    onSuccess: (cart) => queryClient.setQueryData(cartQueryKey, cart),
     onSettled: () => queryClient.invalidateQueries({ queryKey: cartQueryKey }),
   });
 }
@@ -74,9 +81,14 @@ export function useRemoveCartItem() {
         );
       return { previous };
     },
-    onError: (_error, _input, context) => {
+    onError: (error, productId, context) => {
       if (context?.previous)
         queryClient.setQueryData(cartQueryKey, context.previous);
+      notifyMutationError(error, `cart:remove:${productId}`, "Couldn’t update your cart");
+    },
+    onSuccess: (cart, productId) => {
+      queryClient.setQueryData(cartQueryKey, cart);
+      notify(`cart:remove:${productId}`, "success", "Removed from cart");
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: cartQueryKey }),
   });
@@ -93,6 +105,7 @@ export function useCheckout() {
         total: 0,
       });
       void queryClient.invalidateQueries({ queryKey: ordersQueryKey });
+      notify("checkout", "success", "Order created");
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: cartQueryKey }),
   });

@@ -10,7 +10,8 @@ import {
   useWishlistQuery,
   useWishlistToggle,
 } from "@/features/wishlist/wishlist.queries";
-import { ApiClientError } from "@/lib/api/client";
+import { FeedbackAlert } from "@/components/feedback/feedback-alert";
+import { getErrorFeedback } from "@/lib/feedback";
 
 export function ProductActions({
   product,
@@ -30,8 +31,8 @@ export function ProductActions({
   const cart = useAddCartItem();
   const wishlist = useWishlistQuery(user !== null);
   const toggle = useWishlistToggle();
-  const [message, setMessage] = useState<string>();
-  const [messageIsError, setMessageIsError] = useState(false);
+  const [actionError, setActionError] = useState<unknown>();
+  const feedback = actionError ? getErrorFeedback(actionError) : undefined;
   const saved =
     wishlist.data?.items.some(({ id }) => id === product.id) ?? false;
 
@@ -43,34 +44,21 @@ export function ProductActions({
 
   async function addToCart() {
     if (!requireAuth()) return;
-    setMessage(undefined);
-    setMessageIsError(false);
+    setActionError(undefined);
     try {
       await cart.mutateAsync({ productId: product.id, quantity });
-      setMessage("Added to cart");
     } catch (error) {
-      setMessageIsError(true);
-      setMessage(
-        error instanceof ApiClientError
-          ? error.message
-          : "Unable to update cart",
-      );
+      setActionError(error);
     }
   }
 
   async function toggleWishlist() {
     if (!requireAuth()) return;
-    setMessage(undefined);
-    setMessageIsError(false);
+    setActionError(undefined);
     try {
       await toggle.mutateAsync({ productId: product.id, product, add: !saved });
     } catch (error) {
-      setMessageIsError(true);
-      setMessage(
-        error instanceof ApiClientError
-          ? error.message
-          : "Unable to update wishlist",
-      );
+      setActionError(error);
     }
   }
 
@@ -136,13 +124,8 @@ export function ProductActions({
           )}
         </button>
       </div>
-      {message ? (
-        <p
-          role={messageIsError ? "alert" : "status"}
-          className={`${iconOnly ? "sr-only" : "mt-2 text-xs"} ${messageIsError ? "text-red-700" : "text-slate-600"}`}
-        >
-          {message}
-        </p>
+      {feedback?.presentation === "inline" ? (
+        <FeedbackAlert {...feedback} className="mt-3" />
       ) : null}
     </div>
   );

@@ -16,7 +16,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { useAddCartItem } from "@/features/cart/cart.queries";
-import { ApiClientError } from "@/lib/api/client";
+import { FeedbackAlert } from "@/components/feedback/feedback-alert";
+import { getErrorFeedback } from "@/lib/feedback";
 import {
   useWishlistQuery,
   useWishlistToggle,
@@ -35,6 +36,8 @@ export function WishlistPageContent() {
 
   if (wishlist.isPending) return <WishlistWorkspaceSkeleton />;
   if (wishlist.isError) {
+    const feedback = getErrorFeedback(wishlist.error);
+    if (feedback.presentation === "inline") return <FeedbackAlert {...feedback} />;
     return (
       <WishlistErrorState
         isRetrying={wishlist.isFetching}
@@ -136,21 +139,16 @@ function WishlistItem({
   readonly onRemove: () => void;
 }) {
   const cart = useAddCartItem();
-  const [cartMessage, setCartMessage] = useState<string>();
-  const [cartMessageIsError, setCartMessageIsError] = useState(false);
+  const [cartError, setCartError] = useState<unknown>();
+  const cartFeedback = cartError ? getErrorFeedback(cartError) : undefined;
   const outOfStock = product.stock <= 0;
 
   async function addToCart(): Promise<void> {
-    setCartMessage(undefined);
-    setCartMessageIsError(false);
+    setCartError(undefined);
     try {
       await cart.mutateAsync({ productId: product.id, quantity: 1 });
-      setCartMessage("Added to cart");
     } catch (error) {
-      setCartMessageIsError(true);
-      setCartMessage(
-        error instanceof ApiClientError ? error.message : "Unable to update cart",
-      );
+      setCartError(error);
     }
   }
 
@@ -232,34 +230,17 @@ function WishlistItem({
         >
           <Trash2 className="size-4" aria-hidden="true" /> Remove
         </button>
-        {cartMessage ? (
-          <p
-            role={cartMessageIsError ? "alert" : "status"}
-            className={`text-center text-xs sm:text-right ${cartMessageIsError ? "text-red-700" : "text-emerald-700"}`}
-          >
-            {cartMessage}
-          </p>
-        ) : null}
       </div>
+      {cartFeedback?.presentation === "inline" ? (
+        <FeedbackAlert {...cartFeedback} className="col-span-full" />
+      ) : null}
     </article>
   );
 }
 
 function WishlistMutationError({ error }: { readonly error: unknown }) {
-  const apiError = error instanceof ApiClientError ? error : undefined;
-  const message = error instanceof Error ? error.message : "Unable to update wishlist.";
-
-  return (
-    <div role="alert" className="animate-in fade-in slide-in-from-bottom-1 mt-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 motion-reduce:animate-none">
-      <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-      <div>
-        <p className="font-semibold">{message}</p>
-        {apiError?.requestId ? (
-          <p className="mt-1 text-xs text-amber-800">Request ID: {apiError.requestId}</p>
-        ) : null}
-      </div>
-    </div>
-  );
+  const feedback = getErrorFeedback(error);
+  return feedback.presentation === "inline" ? <FeedbackAlert {...feedback} className="mt-4" /> : null;
 }
 
 function WishlistEmptyState() {

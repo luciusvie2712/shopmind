@@ -8,6 +8,7 @@ import { z } from "zod";
 import { ApiClientError, compareProducts } from "@/lib/api/client";
 import { CompareSkeleton } from "./compare-skeleton";
 import { CompareWorkspace } from "./compare-workspace";
+import { getErrorFeedback } from "@/lib/feedback";
 
 const compareIdsSchema = z
   .array(z.string().uuid())
@@ -77,7 +78,7 @@ export function CompareView({ rawIds }: { readonly rawIds?: string }) {
         ? "One or more selected products no longer exist."
         : error instanceof ApiClientError && error.code === "API_UNAVAILABLE"
           ? "The ShopMind API is unavailable."
-          : "Comparison could not be loaded.";
+          : getErrorFeedback(error).description;
 
     return (
       <section

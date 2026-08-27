@@ -6,7 +6,6 @@ import type {
 } from "@shopmind/contracts";
 import { useMutation } from "@tanstack/react-query";
 import {
-  AlertTriangle,
   ArrowRight,
   BrainCircuit,
   ChevronRight,
@@ -24,6 +23,8 @@ import { Reveal } from "@/components/ui/reveal";
 import { aiSearch, ApiClientError } from "@/lib/api/client";
 import { AiRecommendationCard } from "./ai-recommendation-card";
 import { AiSearchInsight } from "./ai-search-insight";
+import { FeedbackAlert } from "@/components/feedback/feedback-alert";
+import { getErrorFeedback } from "@/lib/feedback";
 
 export const aiSearchFormSchema = z.object({
   query: z
@@ -231,22 +232,14 @@ function AiSearchError({
         ? { title: "AI response could not be validated", message: "Gemini returned an invalid response and no safe fallback was available." }
         : apiError?.code === "API_UNAVAILABLE"
           ? { title: "ShopMind is temporarily unavailable", message: "The ShopMind API is unavailable. Your query is still ready to retry." }
-          : { title: "AI search is temporarily unavailable", message: apiError?.message ?? "Please retry your search." };
+          : { title: getErrorFeedback(error).title, message: getErrorFeedback(error).description };
 
   return (
-    <div role="alert" className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-5 sm:flex sm:items-center sm:justify-between sm:gap-6">
-      <div className="flex items-start gap-3">
-        <AlertTriangle className="mt-0.5 size-5 shrink-0 text-red-700" aria-hidden="true" />
-        <div>
-          <h2 className="font-extrabold text-red-950">{content.title}</h2>
-          <p className="mt-1 text-sm leading-6 text-red-800">{content.message}</p>
-          {apiError?.requestId ? <p className="mt-1 text-xs text-red-700">Request ID: {apiError.requestId}</p> : null}
-        </div>
-      </div>
+    <FeedbackAlert variant={getErrorFeedback(error).variant} title={content.title} description={content.message} className="mt-8" action={
       <button type="button" disabled={!canRetry} onClick={onRetry} className="btn-secondary mt-4 border-red-200 text-red-800 sm:mt-0">
         <RefreshCw className="size-4" aria-hidden="true" /> Retry
       </button>
-    </div>
+    } />
   );
 }
 
@@ -272,12 +265,12 @@ function AiSearchResults({
   return (
     <div className="mt-8 space-y-8">
       {data.status === "fallback" ? (
-        <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
-          AI {data.fallback?.stage} was unavailable or invalid. These are deterministic canonical results without fabricated explanations.
-          <button type="button" onClick={onRetry} className="ml-2 inline-flex items-center gap-1 font-bold underline">
-            Retry
-          </button>
-        </div>
+        <FeedbackAlert variant="warning" role="status" title="Showing deterministic results" description={`AI ${data.fallback?.stage ?? "search"} was unavailable or invalid. These are deterministic canonical results without fabricated explanations.`} action={
+          <button type="button" onClick={onRetry} className="btn-secondary"><RefreshCw className="size-4" aria-hidden="true" /> Retry</button>
+        } />
+      ) : null}
+      {selectedProductIds.length === 4 ? (
+        <FeedbackAlert variant="warning" role="status" title="Comparison limit reached" description="You can compare up to 4 products. Remove one to select another." />
       ) : null}
 
       <div className="grid items-start gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">

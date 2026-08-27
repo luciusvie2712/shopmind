@@ -3,7 +3,6 @@
 import type { ProductSummaryContract } from "@shopmind/contracts";
 import { useMutation } from "@tanstack/react-query";
 import {
-  AlertTriangle,
   Bot,
   LoaderCircle,
   RefreshCw,
@@ -17,6 +16,7 @@ import { z } from "zod";
 import { AssistantContextPanel } from "./assistant-context-panel";
 import { AssistantGroundedResults } from "./assistant-grounded-results";
 import { ApiClientError, sendAssistantMessage } from "@/lib/api/client";
+import { FeedbackAlert } from "@/components/feedback/feedback-alert";
 
 export const assistantMessageSchema = z.object({
   message: z.string().trim().min(1, "Enter a message").max(2_000),
@@ -113,14 +113,8 @@ export function AssistantChat() {
         </header>
 
         {assistant.isError ? (
-          <div role="alert" className="m-4 mb-0 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 sm:mx-5">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold">{errorMessage}</p>
-                {apiError?.requestId ? <p className="mt-1 text-xs text-amber-800">Request ID: {apiError.requestId}</p> : null}
-              </div>
-              {apiError?.code !== "FORBIDDEN" && apiError?.code !== "AUTH_REQUIRED" ? (
+          <FeedbackAlert variant="warning" title={errorMessage} className="m-4 mb-0 sm:mx-5" action={
+              apiError?.code !== "FORBIDDEN" && apiError?.code !== "AUTH_REQUIRED" ? (
                 <button
                   type="button"
                   disabled={assistant.variables === undefined || assistant.isPending}
@@ -129,9 +123,8 @@ export function AssistantChat() {
                 >
                   <RefreshCw className="size-3.5" aria-hidden="true" /> Retry
                 </button>
-              ) : null}
-            </div>
-          </div>
+              ) : null
+          } />
         ) : null}
 
         <div
@@ -233,6 +226,8 @@ function formatMessageTime(createdAt: string): string {
 
 function getAssistantErrorMessage(error: ApiClientError | undefined): string {
   switch (error?.code) {
+    case "VALIDATION_ERROR":
+      return "Check your message and try again.";
     case "AI_PROVIDER_TIMEOUT":
       return "The assistant timed out. Your conversation was retained; you can retry.";
     case "AI_INVALID_OUTPUT":

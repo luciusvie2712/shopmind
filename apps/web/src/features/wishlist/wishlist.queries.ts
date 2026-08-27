@@ -5,6 +5,7 @@ import type {
   WishlistContract,
 } from "@shopmind/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { notify, notifyMutationError } from "@/lib/feedback";
 import {
   addWishlistItem,
   getWishlist,
@@ -46,9 +47,13 @@ export function useWishlistToggle() {
       }
       return { previous };
     },
-    onError: (_error, _input, context) => {
+    onError: (error, { productId }, context) => {
       if (context?.previous)
         queryClient.setQueryData(wishlistQueryKey, context.previous);
+      notifyMutationError(error, `wishlist:${productId}`, "Couldn’t update your wishlist");
+    },
+    onSuccess: (_result, { productId, add }) => {
+      notify(`wishlist:${productId}`, "success", add ? "Saved to wishlist" : "Removed from wishlist");
     },
     onSettled: () =>
       queryClient.invalidateQueries({ queryKey: wishlistQueryKey }),

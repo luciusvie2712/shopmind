@@ -4,7 +4,8 @@ import { CircleAlert, LoaderCircle, Mail, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { ApiClientError, registerUser } from "@/lib/api/client";
+import { registerUser } from "@/lib/api/client";
+import { getErrorFeedback } from "@/lib/feedback";
 import { AuthField } from "./auth-field";
 import { registerFormSchema, type RegisterFormValues } from "./auth.schemas";
 import { PasswordField } from "./password-field";
@@ -46,7 +47,7 @@ export function RegisterForm() {
       router.replace("/login");
     } catch (error) {
       setFormError(
-        error instanceof ApiClientError ? error.message : "Unable to register",
+        `${getErrorFeedback(error).title}. ${getErrorFeedback(error).description}`,
       );
     }
   });

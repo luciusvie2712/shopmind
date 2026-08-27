@@ -103,7 +103,7 @@ test("authentication validation and API failure preserve accessible form state",
     page
       .getByRole("region", { name: "Sign in to your account" })
       .getByRole("alert"),
-  ).toContainText("ShopMind API is currently unavailable");
+  ).toContainText("ShopMind is temporarily unavailable");
   await expect(page.getByLabel("Email")).toHaveValue("customer@example.com");
 });
 
