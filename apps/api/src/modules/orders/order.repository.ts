@@ -5,7 +5,10 @@ import { SOURCE_STATUS } from '../products/catalog-state';
 import { calculateCheckout } from './order-calculation';
 
 const orderInclude = {
-  items: { orderBy: { id: 'asc' as const } },
+  items: {
+    orderBy: { id: 'asc' as const },
+    include: { product: { select: { thumbnail: true } } },
+  },
 } as const satisfies Prisma.OrderInclude;
 
 export type OrderRecord = Prisma.OrderGetPayload<{

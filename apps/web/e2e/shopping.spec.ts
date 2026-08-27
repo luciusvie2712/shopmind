@@ -54,12 +54,14 @@ test("auth, wishlist, cart, checkout, orders, and logout use the real API", asyn
   await page.waitForURL("**/orders");
   await expect(page.getByRole("heading", { name: "Orders" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Order history" })).toBeVisible();
-  const orderTable = page.getByRole("table");
-  await expect(orderTable).toBeVisible();
-  await expect(orderTable.getByText("CREATED", { exact: true })).toBeVisible();
-  await expect(orderTable.getByText("Phase 11 Developer Laptop")).toBeVisible();
-  await expect(orderTable.getByText("2 × $899.00")).toBeVisible();
-  await expect(orderTable.getByRole("cell", { name: "$1,798.00", exact: true })).toBeVisible();
+  const orderCard = page.getByRole("article").filter({
+    hasText: "Phase 11 Developer Laptop",
+  });
+  await expect(orderCard.getByText("Order created", { exact: true })).toBeVisible();
+  await expect(orderCard.getByRole("link", { name: "View Phase 11 Developer Laptop" })).toBeVisible();
+  await expect(orderCard.getByText("Qty 2", { exact: true })).toBeVisible();
+  await expect(orderCard.getByText("$899.00 each", { exact: true })).toBeVisible();
+  await expect(orderCard.getByText("$1,798.00", { exact: true }).first()).toBeVisible();
   for (const width of [375, 640, 768, 1024, 1280, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     await expect

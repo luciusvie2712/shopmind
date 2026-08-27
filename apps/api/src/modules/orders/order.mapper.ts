@@ -11,6 +11,7 @@ export function toOrderContract(order: OrderRecord): OrderContract {
     items: order.items.map((item) => ({
       id: item.id,
       productId: item.productId,
+      productThumbnail: item.product.thumbnail,
       productTitleSnapshot: item.productTitleSnapshot,
       unitPriceSnapshot: item.unitPriceSnapshot.toNumber(),
       quantity: item.quantity,

@@ -223,6 +223,7 @@ export interface WishlistContract {
 export interface OrderItemContract {
   readonly id: string;
   readonly productId: string;
+  readonly productThumbnail: string | null;
   readonly productTitleSnapshot: string;
   readonly unitPriceSnapshot: number;
   readonly quantity: number;

@@ -194,6 +194,7 @@ describe('Phase 5 shopping integration', () => {
       total: 39.98,
       items: [
         {
+          productThumbnail: product.thumbnail,
           productTitleSnapshot: product.title,
           unitPriceSnapshot: 19.99,
           quantity: 2,
@@ -211,6 +212,7 @@ describe('Phase 5 shopping integration', () => {
       .set(authorized(accessToken))
       .expect(200);
     expect(history.body.items[0].items[0]).toMatchObject({
+      productThumbnail: product.thumbnail,
       productTitleSnapshot: product.title,
       unitPriceSnapshot: 19.99,
     });

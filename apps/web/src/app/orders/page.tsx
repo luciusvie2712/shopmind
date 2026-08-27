@@ -22,6 +22,9 @@ export default function OrdersPage() {
           </nav>
           <header className="hero-enter hero-enter-2 mt-5">
             <h1 className="page-title mt-0">Orders</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
+              Review every simulated purchase with checkout-time product details and totals.
+            </p>
           </header>
           <div className="hero-enter hero-enter-3 mt-8">
             <OrdersPageContent />

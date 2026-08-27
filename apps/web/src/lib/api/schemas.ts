@@ -138,6 +138,7 @@ export const orderSchema: z.ZodType<OrderContract> = z.object({
     z.object({
       id: z.string().uuid(),
       productId: z.string().uuid(),
+      productThumbnail: z.string().nullable(),
       productTitleSnapshot: z.string(),
       unitPriceSnapshot: z.number().nonnegative(),
       quantity: z.number().int().positive(),
