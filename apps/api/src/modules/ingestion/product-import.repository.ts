@@ -30,17 +30,84 @@ export class ProductImportRepository {
     return product !== null;
   }
 
-  importProducts(
+  async importProducts(
     products: readonly NormalizedProduct[],
   ): Promise<ProductImportResult> {
-    return this.prisma.$transaction(async (transaction) => {
-      let created = 0;
-      let updated = 0;
-      let unchanged = 0;
-      const affectedProductIds = new Set<string>();
-      const embeddingJobs: EmbedProductJobData[] = [];
+    const categories = new Map(
+      products.map(({ category }) => [category.slug, category]),
+    );
+    const categoryIds = new Map<string, string>();
+    for (const category of categories.values()) {
+      const persisted = await this.prisma.category.upsert({
+        where: { slug: category.slug },
+        create: category,
+        update: { name: category.name },
+        select: { id: true },
+      });
+      categoryIds.set(category.slug, persisted.id);
+    }
 
-      for (const product of products) {
+    let created = 0;
+    let updated = 0;
+    let unchanged = 0;
+    const affectedProductIds = new Set<string>();
+    const embeddingJobs: EmbedProductJobData[] = [];
+
+    for (const product of products) {
+      const categoryId = categoryIds.get(product.category.slug);
+      if (categoryId === undefined) {
+        throw new Error('Canonical category was not persisted');
+      }
+      const result = await this.importProduct(product, categoryId);
+      if (result.change === 'created') created += 1;
+      else if (result.change === 'updated') updated += 1;
+      else unchanged += 1;
+      affectedProductIds.add(result.productId);
+      if (result.needsEmbedding) {
+        embeddingJobs.push({
+          productId: result.productId,
+          contentHash: product.contentHash,
+        });
+      }
+    }
+
+    // Never mark source absence after an incomplete import. Earlier product
+    // commits remain recoverable through a full idempotent sync.
+    const externalIds = products.map((product) => product.externalId);
+    const missingProducts = await this.prisma.product.findMany({
+      where: {
+        source: DUMMYJSON_SOURCE,
+        sourceStatus: SOURCE_STATUS.active,
+        ...(externalIds.length > 0
+          ? { externalId: { notIn: externalIds } }
+          : {}),
+      },
+      select: { id: true },
+    });
+    if (missingProducts.length > 0) {
+      await this.prisma.product.updateMany({
+        where: { id: { in: missingProducts.map(({ id }) => id) } },
+        data: { sourceStatus: SOURCE_STATUS.missing },
+      });
+      missingProducts.forEach(({ id }) => affectedProductIds.add(id));
+    }
+
+    return {
+      summary: {
+        received: products.length,
+        created,
+        updated,
+        unchanged,
+        sourceMissing: missingProducts.length,
+      },
+      affectedProductIds: [...affectedProductIds],
+      embeddingJobs,
+    };
+  }
+
+  private importProduct(product: NormalizedProduct, categoryId: string) {
+    return this.prisma.$transaction(
+      async (transaction) => {
         const existing = await transaction.product.findUnique({
           where: {
             source_externalId: {
@@ -54,13 +121,7 @@ export class ProductImportRepository {
             embedding: { select: { contentHash: true } },
           },
         });
-        const category = await transaction.category.upsert({
-          where: { slug: product.category.slug },
-          create: product.category,
-          update: { name: product.category.name },
-          select: { id: true },
-        });
-        const productData = this.toProductData(product, category.id);
+        const productData = this.toProductData(product, categoryId);
         const persisted =
           existing === null
             ? await transaction.product.create({ data: productData })
@@ -68,14 +129,6 @@ export class ProductImportRepository {
                 where: { id: existing.id },
                 data: productData,
               });
-
-        if (existing === null) {
-          created += 1;
-        } else if (existing.contentHash === product.contentHash) {
-          unchanged += 1;
-        } else {
-          updated += 1;
-        }
 
         await transaction.productImage.deleteMany({
           where: { productId: persisted.id },
@@ -105,50 +158,23 @@ export class ProductImportRepository {
           });
         }
 
-        affectedProductIds.add(persisted.id);
-        if (
-          existing === null ||
-          existing.contentHash !== product.contentHash ||
-          existing.embedding?.contentHash !== product.contentHash
-        ) {
-          embeddingJobs.push({
-            productId: persisted.id,
-            contentHash: product.contentHash,
-          });
-        }
-      }
-
-      const externalIds = products.map((product) => product.externalId);
-      const missingProducts = await transaction.product.findMany({
-        where: {
-          source: DUMMYJSON_SOURCE,
-          sourceStatus: SOURCE_STATUS.active,
-          ...(externalIds.length > 0
-            ? { externalId: { notIn: externalIds } }
-            : {}),
-        },
-        select: { id: true },
-      });
-      if (missingProducts.length > 0) {
-        await transaction.product.updateMany({
-          where: { id: { in: missingProducts.map(({ id }) => id) } },
-          data: { sourceStatus: SOURCE_STATUS.missing },
-        });
-        missingProducts.forEach(({ id }) => affectedProductIds.add(id));
-      }
-
-      return {
-        summary: {
-          received: products.length,
-          created,
-          updated,
-          unchanged,
-          sourceMissing: missingProducts.length,
-        },
-        affectedProductIds: [...affectedProductIds],
-        embeddingJobs,
-      };
-    });
+        return {
+          productId: persisted.id,
+          change:
+            existing === null
+              ? 'created'
+              : existing.contentHash === product.contentHash
+                ? 'unchanged'
+                : 'updated',
+          needsEmbedding:
+            existing === null ||
+            existing.contentHash !== product.contentHash ||
+            existing.embedding?.contentHash !== product.contentHash,
+        };
+      },
+      // Guardrails for one product's DB writes, never a catalog-wide timeout.
+      { maxWait: 5_000, timeout: 10_000 },
+    );
   }
 
   private toProductData(

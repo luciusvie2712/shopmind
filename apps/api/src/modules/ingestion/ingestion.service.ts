@@ -20,11 +20,13 @@ export class IngestionService {
     private readonly queueService: QueueService,
   ) {}
 
-  async bootstrapCatalog(): Promise<
+  async bootstrapCatalog(
+    options: { readonly force?: boolean } = {},
+  ): Promise<
     | { readonly status: 'skipped' }
     | { readonly status: 'imported'; readonly summary: ProductImportSummary }
   > {
-    if (await this.productImportRepository.hasProducts()) {
+    if (!options.force && (await this.productImportRepository.hasProducts())) {
       this.logger.log({
         operation: 'bootstrap_catalog',
         status: 'skipped',

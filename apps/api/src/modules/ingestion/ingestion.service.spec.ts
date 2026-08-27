@@ -56,4 +56,16 @@ describe('IngestionService catalog bootstrap', () => {
     });
     expect(productImportRepository.importProducts).toHaveBeenCalledWith([]);
   });
+
+  it('forces a full sync even when a partial catalog already exists', async () => {
+    const { productImportRepository, service } = setup(true);
+
+    await expect(
+      service.bootstrapCatalog({ force: true }),
+    ).resolves.toMatchObject({
+      status: 'imported',
+    });
+    expect(productImportRepository.hasProducts).not.toHaveBeenCalled();
+    expect(productImportRepository.importProducts).toHaveBeenCalledWith([]);
+  });
 });

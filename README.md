@@ -230,15 +230,23 @@ Swagger is disabled when `NODE_ENV=production`.
 
 ## Product import
 
-For a host-based setup, bootstrap an empty catalog through the internal CLI:
+For a host-based setup, bootstrap or recover the catalog through the internal CLI:
 
 ```bash
 corepack pnpm --filter api catalog:bootstrap
 ```
 
 This command uses the same validation, normalization, canonical upsert, cache
-invalidation, and embedding enqueue pipeline as normal ingestion. It skips
-cleanly when products already exist.
+invalidation, and embedding enqueue pipeline as normal ingestion. It explicitly
+runs a full idempotent sync, even when products already exist, so re-running it
+can recover an interrupted import. It exits non-zero on failure. The compiled
+production command is `node apps/api/dist/catalog-bootstrap.js`.
+
+Only the automatic development Compose bootstrap passes `--if-empty` to skip
+when products already exist. Do not use that option for partial-import recovery.
+Categories are upserted once per slug, then each product and its images/reviews
+commit in a short transaction. Source absence is marked only after all products
+persist, and embedding jobs are enqueued after persistence has committed.
 
 Recurring/manual product synchronization remains queue-backed, so Redis, the
 worker, and API must be running. The protected trigger is:
@@ -285,7 +293,7 @@ embedding, and upserts it into PostgreSQL.
 | --- | --- |
 | `corepack pnpm dev` | Start package `dev` tasks (web and API; not worker) |
 | `corepack pnpm --filter api worker:dev` | Start the BullMQ worker in watch mode |
-| `corepack pnpm --filter api catalog:bootstrap` | Import DummyJSON only when the catalog is empty |
+| `corepack pnpm --filter api catalog:bootstrap` | Full idempotent DummyJSON sync, including partial-import recovery |
 | `corepack pnpm --filter api admin:grant -- --email <email>` | Grant ADMIN to an existing user |
 | `corepack pnpm --filter api build` | Build API and worker entrypoints |
 | `corepack pnpm --filter api start:prod` | Run the compiled API |

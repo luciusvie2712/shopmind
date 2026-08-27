@@ -67,7 +67,7 @@ services:
   bootstrap-catalog:
     <<: *api-runtime
     restart: "no"
-    command: ["node", "apps/api/dist/catalog-bootstrap.js"]
+    command: ["node", "apps/api/dist/catalog-bootstrap.js", "--if-empty"]
     depends_on:
       migrate:
         condition: service_completed_successfully
