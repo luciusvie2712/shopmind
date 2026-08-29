@@ -5,49 +5,65 @@
 @custom-variant dark (&:is(.dark *));
 
 /* Keep Sonner's live region, keyboard handling and stacking mechanics. */
-[data-sonner-toast][data-styled="true"].shopmind-toast {
+[data-sonner-toast].shopmind-toast {
   width: 100%;
-  padding: 16px 44px 16px 16px;
-  gap: 12px;
-  align-items: flex-start;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: white;
-  color: var(--foreground);
-  box-shadow: 0 6px 20px rgb(15 23 42 / 0.09);
-  transition: transform 200ms ease, opacity 200ms ease, height 200ms ease;
-}
-
-[data-sonner-toast][data-styled="true"].shopmind-toast [data-title] {
-  font-size: 14px;
-  font-weight: 650;
-  line-height: 1.5;
-}
-
-[data-sonner-toast][data-styled="true"].shopmind-toast [data-description] {
-  color: var(--muted-foreground);
-  line-height: 1.5;
-}
-
-[data-sonner-toast][data-styled="true"].shopmind-toast [data-close-button] {
-  top: 10px;
-  right: 8px;
-  left: auto;
-  width: 28px;
-  height: 28px;
-  transform: none;
+  padding: 0;
   border: 0;
-  border-radius: 8px;
-  background: white;
-  color: var(--muted-foreground);
+  background: transparent;
+  box-shadow: none;
+  transition:
+    transform 200ms ease,
+    opacity 200ms ease,
+    height 200ms ease;
 }
 
 [data-sonner-toast].shopmind-toast[data-mounted="false"] {
-  transform: translateY(-6px);
+  opacity: 0;
+  transform: translateY(var(--offset)) translateX(10px);
 }
 
 [data-sonner-toast].shopmind-toast[data-removed="true"][data-swipe-out="false"] {
-  transform: translateY(var(--offset)) translateX(6px);
+  opacity: 0;
+  transform: translateY(var(--offset)) translateX(8px);
+  transition-duration: 160ms;
+}
+
+.app-feedback-dialog {
+  opacity: 0;
+  transform: translateY(4px) scale(0.975);
+  transition:
+    opacity 200ms ease,
+    transform 200ms ease,
+    display 200ms allow-discrete,
+    overlay 200ms allow-discrete;
+}
+
+.app-feedback-dialog[open] {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.app-feedback-dialog::backdrop {
+  opacity: 0;
+  transition:
+    opacity 160ms ease,
+    display 160ms allow-discrete,
+    overlay 160ms allow-discrete;
+}
+
+.app-feedback-dialog[open]::backdrop {
+  opacity: 1;
+}
+
+@starting-style {
+  .app-feedback-dialog[open] {
+    opacity: 0;
+    transform: translateY(4px) scale(0.975);
+  }
+
+  .app-feedback-dialog[open]::backdrop {
+    opacity: 0;
+  }
 }
 
 .feedback-alert {
@@ -55,13 +71,24 @@
 }
 
 @keyframes feedback-enter {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .feedback-alert {
     animation: none;
+  }
+
+  .app-feedback-dialog,
+  .app-feedback-dialog::backdrop {
+    transition: none;
   }
 
   [data-sonner-toast].shopmind-toast,
@@ -230,8 +257,16 @@
   body {
     @apply min-w-80 bg-background text-foreground antialiased;
     background-image:
-      radial-gradient(circle at 8% 0%, oklch(0.953 0.051 180.801 / 0.32), transparent 24rem),
-      radial-gradient(circle at 92% 4%, oklch(0.932 0.032 255.585 / 0.46), transparent 28rem);
+      radial-gradient(
+        circle at 8% 0%,
+        oklch(0.953 0.051 180.801 / 0.32),
+        transparent 24rem
+      ),
+      radial-gradient(
+        circle at 92% 4%,
+        oklch(0.932 0.032 255.585 / 0.46),
+        transparent 28rem
+      );
     background-attachment: fixed;
   }
 
@@ -457,12 +492,24 @@
   animation: hero-enter 580ms ease-out both;
 }
 
-.hero-enter-1 { animation-delay: 60ms; }
-.hero-enter-2 { animation-delay: 140ms; }
-.hero-enter-3 { animation-delay: 240ms; }
-.hero-enter-4 { animation-delay: 340ms; }
-.hero-enter-5 { animation-delay: 440ms; }
-.hero-enter-6 { animation-delay: 540ms; }
+.hero-enter-1 {
+  animation-delay: 60ms;
+}
+.hero-enter-2 {
+  animation-delay: 140ms;
+}
+.hero-enter-3 {
+  animation-delay: 240ms;
+}
+.hero-enter-4 {
+  animation-delay: 340ms;
+}
+.hero-enter-5 {
+  animation-delay: 440ms;
+}
+.hero-enter-6 {
+  animation-delay: 540ms;
+}
 
 .hero-title-letter {
   animation: hero-title-letter-hop 3.2s ease-in-out infinite;

@@ -50,10 +50,25 @@ export function useWishlistToggle() {
     onError: (error, { productId }, context) => {
       if (context?.previous)
         queryClient.setQueryData(wishlistQueryKey, context.previous);
-      notifyMutationError(error, `wishlist:${productId}`, "Couldn’t update your wishlist");
+      notifyMutationError(
+        error,
+        `wishlist:${productId}`,
+        "Couldn’t update your wishlist",
+      );
     },
-    onSuccess: (_result, { productId, add }) => {
-      notify(`wishlist:${productId}`, "success", add ? "Saved to wishlist" : "Removed from wishlist");
+    onSuccess: (_result, { productId, product, add }) => {
+      notify(
+        `wishlist:${productId}`,
+        add ? "success" : "neutral",
+        add ? "Saved to wishlist" : "Removed from wishlist",
+        {
+          description: `${product.title} has been ${add ? "saved to" : "removed from"} your wishlist.`,
+          icon: "wishlist",
+          action: add
+            ? { label: "View wishlist", href: "/wishlist" }
+            : undefined,
+        },
+      );
     },
     onSettled: () =>
       queryClient.invalidateQueries({ queryKey: wishlistQueryKey }),

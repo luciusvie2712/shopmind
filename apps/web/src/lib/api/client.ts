@@ -20,6 +20,20 @@ import type {
   SemanticSearchRequest,
   UserContract,
   WishlistContract,
+  CreateUserEventContract,
+  CreateUserEventRequest,
+  AdminAnalyticsOverviewContract,
+  RecommendationsContract,
+  ReviewSummaryContract,
+  MultimodalSearchContract,
+  PaymentContract,
+  AdminAiLogListContract,
+  AdminIngestionStatusContract,
+  AdminListQueryContract,
+  AdminOrderListContract,
+  AdminPaymentListContract,
+  AdminProductListContract,
+  AdminUserListContract,
 } from "@shopmind/contracts";
 import { z } from "zod";
 import {
@@ -38,6 +52,18 @@ import {
   semanticSearchSchema,
   userSchema,
   wishlistSchema,
+  createUserEventSchema,
+  adminAnalyticsOverviewSchema,
+  recommendationsSchema,
+  reviewSummarySchema,
+  multimodalSearchSchema,
+  paymentSchema,
+  adminAiLogListSchema,
+  adminIngestionStatusSchema,
+  adminOrderListSchema,
+  adminPaymentListSchema,
+  adminProductListSchema,
+  adminUserListSchema,
 } from "./schemas";
 
 export type ApiClientErrorCode =
@@ -332,8 +358,8 @@ export function searchProducts(
 export function semanticSearch(
   input: SemanticSearchRequest,
 ): Promise<SemanticSearchContract> {
-  return apiRequest('search/semantic', {
-    method: 'POST',
+  return apiRequest("search/semantic", {
+    method: "POST",
     schema: semanticSearchSchema,
     json: input,
   });
@@ -379,5 +405,276 @@ export function getCategories(): Promise<readonly CategoryContract[]> {
   return apiRequest("categories", {
     method: "GET",
     schema: categoriesSchema,
+  });
+}
+
+export async function streamAssistantMessage(
+  input: AssistantMessageRequest,
+  onDelta: (delta: string) => void,
+  signal?: AbortSignal,
+  retryAuth = true,
+): Promise<AssistantTurnContract> {
+  let response: Response;
+  try {
+    response = await fetch(apiUrl("ai/assistant/stream"), {
+      method: "POST",
+      credentials: "include",
+      signal,
+      headers: {
+        accept: "text/event-stream",
+        "content-type": "application/json",
+        ...(accessToken === null
+          ? {}
+          : { authorization: `Bearer ${accessToken}` }),
+      },
+      body: JSON.stringify(input),
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError")
+      throw error;
+    throw new ApiClientError(
+      "API_UNAVAILABLE",
+      "Assistant stream is unavailable",
+      0,
+    );
+  }
+  if (response.status === 401 && retryAuth) {
+    await refreshSession();
+    return streamAssistantMessage(input, onDelta, signal, false);
+  }
+  if (!response.ok || response.body === null) {
+    if (response.status === 404 || response.status === 405)
+      return sendAssistantMessage(input);
+    throw new ApiClientError(
+      "INVALID_RESPONSE",
+      "Assistant stream failed",
+      response.status,
+    );
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let completed: AssistantTurnContract | undefined;
+  while (true) {
+    const { value, done } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+    const frames = buffer.split("\n\n");
+    buffer = frames.pop() ?? "";
+    for (const frame of frames) {
+      const dataLine = frame
+        .split("\n")
+        .find((line) => line.startsWith("data: "));
+      if (!dataLine) continue;
+      let payload: unknown;
+      try {
+        payload = JSON.parse(dataLine.slice(6)) as unknown;
+      } catch {
+        continue;
+      }
+      if (
+        typeof payload !== "object" ||
+        payload === null ||
+        !("type" in payload)
+      )
+        continue;
+      if (
+        payload.type === "message.delta" &&
+        "delta" in payload &&
+        typeof payload.delta === "string"
+      )
+        onDelta(payload.delta);
+      if (payload.type === "message.done" && "turn" in payload) {
+        const parsed = assistantTurnSchema.safeParse(payload.turn);
+        if (parsed.success) completed = parsed.data;
+      }
+      if (payload.type === "error")
+        throw new ApiClientError(
+          "AI_PROVIDER_TIMEOUT",
+          "Assistant stream failed",
+          502,
+        );
+    }
+    if (done) break;
+  }
+  if (!completed)
+    throw new ApiClientError(
+      "INVALID_RESPONSE",
+      "Assistant stream ended without a final message",
+      502,
+    );
+  return completed;
+}
+
+export function recordUserEvent(
+  input: CreateUserEventRequest,
+): Promise<CreateUserEventContract> {
+  return apiRequest("events", {
+    method: "POST",
+    schema: createUserEventSchema,
+    auth: true,
+    retryAuth: false,
+    json: input,
+  });
+}
+
+export function getAdminAnalyticsOverview(
+  days = 30,
+): Promise<AdminAnalyticsOverviewContract> {
+  return apiRequest(`admin/analytics/overview?days=${days}`, {
+    method: "GET",
+    schema: adminAnalyticsOverviewSchema,
+    auth: true,
+  });
+}
+
+function adminListQuery(query: AdminListQueryContract): string {
+  const params = new URLSearchParams();
+  if (query.page !== undefined) params.set("page", String(query.page));
+  if (query.pageSize !== undefined)
+    params.set("pageSize", String(query.pageSize));
+  if (query.search) params.set("search", query.search);
+  if (query.status) params.set("status", query.status);
+  return params.toString();
+}
+
+export function getAdminUsers(
+  query: AdminListQueryContract,
+): Promise<AdminUserListContract> {
+  return apiRequest(`admin/users?${adminListQuery(query)}`, {
+    method: "GET",
+    schema: adminUserListSchema,
+    auth: true,
+  });
+}
+
+export function getAdminOrders(
+  query: AdminListQueryContract,
+): Promise<AdminOrderListContract> {
+  return apiRequest(`admin/orders?${adminListQuery(query)}`, {
+    method: "GET",
+    schema: adminOrderListSchema,
+    auth: true,
+  });
+}
+
+export function getAdminPayments(
+  query: AdminListQueryContract,
+): Promise<AdminPaymentListContract> {
+  return apiRequest(`admin/payments?${adminListQuery(query)}`, {
+    method: "GET",
+    schema: adminPaymentListSchema,
+    auth: true,
+  });
+}
+
+export function getAdminProducts(
+  query: AdminListQueryContract,
+): Promise<AdminProductListContract> {
+  return apiRequest(`admin/products?${adminListQuery(query)}`, {
+    method: "GET",
+    schema: adminProductListSchema,
+    auth: true,
+  });
+}
+
+export function getAdminAiLogs(
+  query: AdminListQueryContract,
+): Promise<AdminAiLogListContract> {
+  return apiRequest(`admin/ai-logs?${adminListQuery(query)}`, {
+    method: "GET",
+    schema: adminAiLogListSchema,
+    auth: true,
+  });
+}
+
+export function getAdminIngestionStatus(): Promise<AdminIngestionStatusContract> {
+  return apiRequest("admin/ingestion/status", {
+    method: "GET",
+    schema: adminIngestionStatusSchema,
+    auth: true,
+  });
+}
+
+export function triggerAdminProductIngestion(): Promise<{
+  readonly jobId: string;
+  readonly status: "queued";
+}> {
+  return apiRequest("admin/ingestion/products", {
+    method: "POST",
+    schema: z.object({ jobId: z.string(), status: z.literal("queued") }),
+    auth: true,
+  });
+}
+
+export function getRecommendations(
+  limit = 8,
+): Promise<RecommendationsContract> {
+  return apiRequest(`recommendations?limit=${limit}`, {
+    method: "GET",
+    schema: recommendationsSchema,
+    auth: true,
+  });
+}
+
+export function getReviewSummary(
+  productId: string,
+): Promise<ReviewSummaryContract> {
+  return apiRequest(
+    `products/${encodeURIComponent(productId)}/review-summary`,
+    {
+      method: "GET",
+      schema: reviewSummarySchema,
+    },
+  );
+}
+
+export async function imageSearch(input: {
+  readonly image: File;
+  readonly category?: string;
+  readonly maxPrice?: number;
+}): Promise<MultimodalSearchContract> {
+  const form = new FormData();
+  form.set("image", input.image);
+  if (input.category) form.set("category", input.category);
+  if (input.maxPrice !== undefined)
+    form.set("maxPrice", String(input.maxPrice));
+  let response: Response;
+  try {
+    response = await fetch(apiUrl("search/image"), {
+      method: "POST",
+      body: form,
+    });
+  } catch {
+    throw new ApiClientError(
+      "API_UNAVAILABLE",
+      "Image search is unavailable",
+      0,
+    );
+  }
+  const payload = await responsePayload(response);
+  if (!response.ok)
+    throw new ApiClientError(
+      "VALIDATION_ERROR",
+      "The image could not be searched",
+      response.status,
+    );
+  const parsed = multimodalSearchSchema.safeParse(payload);
+  if (!parsed.success)
+    throw new ApiClientError(
+      "INVALID_RESPONSE",
+      "Image search returned an invalid response",
+      response.status,
+    );
+  return parsed.data;
+}
+
+export function createPaymentIntent(
+  idempotencyKey: string,
+): Promise<PaymentContract> {
+  return apiRequest("payments/intents", {
+    method: "POST",
+    schema: paymentSchema,
+    auth: true,
+    json: { idempotencyKey },
   });
 }

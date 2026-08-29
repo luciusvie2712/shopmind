@@ -10,12 +10,12 @@ import {
   ShieldCheck,
   UserRound,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { AssistantContextPanel } from "./assistant-context-panel";
 import { AssistantGroundedResults } from "./assistant-grounded-results";
-import { ApiClientError, sendAssistantMessage } from "@/lib/api/client";
+import { ApiClientError, streamAssistantMessage } from "@/lib/api/client";
 import { FeedbackAlert } from "@/components/feedback/feedback-alert";
 
 export const assistantMessageSchema = z.object({
@@ -40,10 +40,18 @@ export function AssistantChat() {
   const [conversationId, setConversationId] = useState<string>();
   const [messages, setMessages] = useState<readonly DisplayMessage[]>([]);
   const [groundedProducts, setGroundedProducts] = useState<readonly ProductSummaryContract[]>([]);
+  const [streamingText, setStreamingText] = useState("");
+  const abortRef = useRef<AbortController | null>(null);
   const form = useForm<FormValues>({ defaultValues: { message: "" } });
   const assistant = useMutation({
-    mutationFn: sendAssistantMessage,
+    mutationFn: async (input: Parameters<typeof streamAssistantMessage>[0]) => {
+      const controller = new AbortController();
+      abortRef.current = controller;
+      setStreamingText("");
+      return streamAssistantMessage(input, (delta) => setStreamingText((text) => text + delta), controller.signal);
+    },
     onSuccess: (turn) => {
+      setStreamingText("");
       setConversationId(turn.conversationId);
       setGroundedProducts(turn.products);
       setMessages((current) => [
@@ -56,6 +64,8 @@ export function AssistantChat() {
         },
       ]);
     },
+    onError: () => setStreamingText(""),
+    onSettled: () => { abortRef.current = null; },
   });
 
   function submit(values: FormValues): void {
@@ -142,10 +152,7 @@ export function AssistantChat() {
                 <Bot className="size-4" aria-hidden="true" />
               </span>
               <div className="rounded-2xl rounded-tl-md border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                <span className="flex items-center gap-2 text-sm text-slate-600">
-                  <LoaderCircle className="size-4 animate-spin text-indigo-600 motion-reduce:animate-none" aria-hidden="true" />
-                  Waiting for the assistant response…
-                </span>
+                {streamingText ? <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">{streamingText}</p> : <span className="flex items-center gap-2 text-sm text-slate-600"><LoaderCircle className="size-4 animate-spin text-indigo-600 motion-reduce:animate-none" aria-hidden="true" />Waiting for the assistant response…</span>}
               </div>
             </div>
           ) : null}
@@ -166,6 +173,7 @@ export function AssistantChat() {
             />
             <div className="mt-1 flex items-end justify-between gap-3 border-t border-slate-100 px-1 pt-2">
               <p id="assistant-message-help" className="max-w-md text-[11px] leading-4 text-slate-500">No checkout, payment, cart, or wishlist writes are available to AI.</p>
+              {assistant.isPending ? <button type="button" onClick={() => abortRef.current?.abort()} className="btn-secondary min-h-11 px-3" aria-label="Stop assistant response">Stop</button> : null}
               <button type="submit" disabled={assistant.isPending} className="btn-ai size-11 shrink-0 px-0" aria-label="Send">
                 {assistant.isPending ? (
                   <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />

@@ -18,10 +18,7 @@ import { useState } from "react";
 import { useAddCartItem } from "@/features/cart/cart.queries";
 import { FeedbackAlert } from "@/components/feedback/feedback-alert";
 import { getErrorFeedback } from "@/lib/feedback";
-import {
-  useWishlistQuery,
-  useWishlistToggle,
-} from "./wishlist.queries";
+import { useWishlistQuery, useWishlistToggle } from "./wishlist.queries";
 import { WishlistWorkspaceSkeleton } from "./wishlist-page-skeleton";
 
 const money = new Intl.NumberFormat("en-US", {
@@ -37,7 +34,8 @@ export function WishlistPageContent() {
   if (wishlist.isPending) return <WishlistWorkspaceSkeleton />;
   if (wishlist.isError) {
     const feedback = getErrorFeedback(wishlist.error);
-    if (feedback.presentation === "inline") return <FeedbackAlert {...feedback} />;
+    if (feedback.presentation === "inline")
+      return <FeedbackAlert {...feedback} />;
     return (
       <WishlistErrorState
         isRetrying={wishlist.isFetching}
@@ -74,7 +72,10 @@ export function WishlistPageContent() {
           >
             <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-5 sm:px-6">
               <div>
-                <h2 id="wishlist-items-title" className="font-bold text-slate-950">
+                <h2
+                  id="wishlist-items-title"
+                  className="font-bold text-slate-950"
+                >
                   Saved products
                 </h2>
                 <p className="mt-1 text-xs text-slate-500">
@@ -82,8 +83,14 @@ export function WishlistPageContent() {
                 </p>
               </div>
               {wishlist.isFetching ? (
-                <span role="status" className="inline-flex items-center gap-2 text-xs font-semibold text-teal-700">
-                  <LoaderCircle className="size-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+                <span
+                  role="status"
+                  className="inline-flex items-center gap-2 text-xs font-semibold text-teal-700"
+                >
+                  <LoaderCircle
+                    className="size-3.5 animate-spin motion-reduce:animate-none"
+                    aria-hidden="true"
+                  />
                   Refreshing
                 </span>
               ) : null}
@@ -116,7 +123,9 @@ function WishlistSummary({ count }: { readonly count: number }) {
       <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-teal-50 text-teal-700">
         <Heart className="size-7" aria-hidden="true" />
       </span>
-      <p className="mt-5 text-3xl font-extrabold tracking-tight text-slate-950">{count}</p>
+      <p className="mt-5 text-3xl font-extrabold tracking-tight text-slate-950">
+        {count}
+      </p>
       <h2 id="wishlist-summary-title" className="mt-1 font-bold text-slate-950">
         {count === 1 ? "Saved item" : "Saved items"}
       </h2>
@@ -146,7 +155,7 @@ function WishlistItem({
   async function addToCart(): Promise<void> {
     setCartError(undefined);
     try {
-      await cart.mutateAsync({ productId: product.id, quantity: 1 });
+      await cart.mutateAsync({ productId: product.id, quantity: 1, product });
     } catch (error) {
       setCartError(error);
     }
@@ -180,7 +189,10 @@ function WishlistItem({
 
       <div className="min-w-0">
         <div className="flex items-start gap-2">
-          <Heart className="mt-1 size-4 shrink-0 fill-red-500 text-red-500" aria-hidden="true" />
+          <Heart
+            className="mt-1 size-4 shrink-0 fill-red-500 text-red-500"
+            aria-hidden="true"
+          />
           <Link
             href={`/products/${product.id}`}
             className="line-clamp-2 font-bold leading-6 text-slate-950 transition-colors hover:text-teal-700"
@@ -189,14 +201,23 @@ function WishlistItem({
           </Link>
         </div>
         <p className="mt-1 text-xs leading-5 text-slate-500">
-          {product.brand ? `${product.brand} · ` : ""}{product.category.name}
+          {product.brand ? `${product.brand} · ` : ""}
+          {product.category.name}
         </p>
         <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-slate-600">
-          <Star className="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
+          <Star
+            className="size-4 fill-amber-400 text-amber-400"
+            aria-hidden="true"
+          />
           <span>{product.rating.toFixed(1)}</span>
         </p>
-        <p className={`mt-2 flex items-center gap-1.5 text-xs font-semibold ${outOfStock ? "text-red-700" : "text-emerald-700"}`}>
-          <span className="inline-block size-1.5 rounded-full bg-current" aria-hidden="true" />
+        <p
+          className={`mt-2 flex items-center gap-1.5 text-xs font-semibold ${outOfStock ? "text-red-700" : "text-emerald-700"}`}
+        >
+          <span
+            className="inline-block size-1.5 rounded-full bg-current"
+            aria-hidden="true"
+          />
           {outOfStock ? "Out of stock" : `${product.stock} in stock`}
         </p>
         <p className="mt-3 text-lg font-extrabold text-slate-950 sm:hidden">
@@ -215,11 +236,18 @@ function WishlistItem({
           className="btn-secondary min-h-11 w-full px-3 sm:mt-2 sm:w-auto"
         >
           {cart.isPending ? (
-            <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+            <LoaderCircle
+              className="size-4 animate-spin motion-reduce:animate-none"
+              aria-hidden="true"
+            />
           ) : (
             <ShoppingCart className="size-4" aria-hidden="true" />
           )}
-          {outOfStock ? "Out of stock" : cart.isPending ? "Adding..." : "Add to cart"}
+          {outOfStock
+            ? "Out of stock"
+            : cart.isPending
+              ? "Adding..."
+              : "Add to cart"}
         </button>
         <button
           type="button"
@@ -240,7 +268,9 @@ function WishlistItem({
 
 function WishlistMutationError({ error }: { readonly error: unknown }) {
   const feedback = getErrorFeedback(error);
-  return feedback.presentation === "inline" ? <FeedbackAlert {...feedback} className="mt-4" /> : null;
+  return feedback.presentation === "inline" ? (
+    <FeedbackAlert {...feedback} className="mt-4" />
+  ) : null;
 }
 
 function WishlistEmptyState() {
@@ -249,7 +279,9 @@ function WishlistEmptyState() {
       <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-rose-50 text-rose-600">
         <PackageOpen className="size-7" aria-hidden="true" />
       </span>
-      <h2 className="mt-5 text-xl font-bold text-slate-950">No saved products yet</h2>
+      <h2 className="mt-5 text-xl font-bold text-slate-950">
+        No saved products yet
+      </h2>
       <p className="mt-2 text-sm text-slate-600">
         Use the wishlist action on a product to save it here.
       </p>
@@ -268,19 +300,29 @@ function WishlistErrorState({
   readonly isRetrying: boolean;
 }) {
   return (
-    <section role="alert" className="surface-card border-red-200 bg-red-50/80 p-8 text-center">
+    <section
+      role="alert"
+      className="surface-card border-red-200 bg-red-50/80 p-8 text-center"
+    >
       <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-red-100 text-red-800">
         <AlertTriangle className="size-6" aria-hidden="true" />
       </span>
-      <h2 className="mt-4 text-lg font-bold text-red-950">Wishlist unavailable</h2>
-      <p className="mt-2 text-sm text-red-900">Wishlist is temporarily unavailable.</p>
+      <h2 className="mt-4 text-lg font-bold text-red-950">
+        Wishlist unavailable
+      </h2>
+      <p className="mt-2 text-sm text-red-900">
+        Wishlist is temporarily unavailable.
+      </p>
       <button
         type="button"
         onClick={retry}
         disabled={isRetrying}
         className="btn-secondary mt-5 border-red-200 text-red-900"
       >
-        <RefreshCw className={`size-4 ${isRetrying ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden="true" />
+        <RefreshCw
+          className={`size-4 ${isRetrying ? "animate-spin motion-reduce:animate-none" : ""}`}
+          aria-hidden="true"
+        />
         {isRetrying ? "Trying again..." : "Try again"}
       </button>
     </section>

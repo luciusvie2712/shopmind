@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Reveal } from "@/components/ui/reveal";
 import { ProductCard } from "@/features/products/product-card";
 import { FeedbackAlert } from "@/components/feedback/feedback-alert";
+import { notify } from "@/lib/feedback";
 
 export function CompareSelection({
   products,
@@ -17,12 +18,26 @@ export function CompareSelection({
   const [selected, setSelected] = useState<readonly string[]>([]);
 
   function toggle(productId: string): void {
-    setSelected((current) =>
-      current.includes(productId)
-        ? current.filter((id) => id !== productId)
-        : current.length < 4
-          ? [...current, productId]
-          : current,
+    const removing = selected.includes(productId);
+    if (!removing && selected.length >= 4) return;
+    const next = removing
+      ? selected.filter((id) => id !== productId)
+      : [...selected, productId];
+    setSelected(next);
+    const product = products.find(({ id }) => id === productId);
+    if (!product) return;
+    notify(
+      `compare:${productId}`,
+      removing ? "neutral" : "info",
+      "Compare updated",
+      {
+        description: `${product.title} has been ${removing ? "removed from" : "added to"} your compare list.`,
+        icon: "compare",
+        action:
+          next.length >= 2
+            ? { label: "View compare", href: `/compare?ids=${next.join(",")}` }
+            : undefined,
+      },
     );
   }
 
@@ -30,7 +45,10 @@ export function CompareSelection({
     <section aria-label="Catalog products">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 px-4 py-3">
         <p className="flex items-center gap-2 text-xs font-semibold text-slate-600 sm:text-sm">
-          <GitCompareArrows className="size-4 text-indigo-600" aria-hidden="true" />
+          <GitCompareArrows
+            className="size-4 text-indigo-600"
+            aria-hidden="true"
+          />
           Select 2–4 products to compare ({selected.length}/4)
         </p>
         <button
@@ -44,7 +62,13 @@ export function CompareSelection({
       </div>
 
       {selected.length === 4 ? (
-        <FeedbackAlert variant="warning" role="status" title="Comparison limit reached" description="You can compare up to 4 products. Remove one to select another." className="mb-4" />
+        <FeedbackAlert
+          variant="warning"
+          role="status"
+          title="Comparison limit reached"
+          description="You can compare up to 4 products. Remove one to select another."
+          className="mb-4"
+        />
       ) : null}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {products.map((product, index) => {

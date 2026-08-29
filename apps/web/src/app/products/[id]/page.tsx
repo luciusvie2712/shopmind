@@ -7,6 +7,7 @@ import { TrustSection } from "@/features/home/components/trust-section";
 import { ProductDetailContent } from "@/features/products/product-detail-content";
 import { ProductGallery } from "@/features/products/product-gallery";
 import { ProductPurchasePanel } from "@/features/products/product-purchase-panel";
+import { ProductViewTelemetry } from "@/features/products/product-view-telemetry";
 import { ApiClientError } from "@/lib/api/client";
 import { getProductPageData } from "./product-data";
 
@@ -60,6 +61,7 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <main className="overflow-x-clip bg-white/75">
+      <ProductViewTelemetry productId={product.id} />
       <div className="page-shell pt-6 sm:pt-7 lg:pt-8">
         <nav
           aria-label="Breadcrumb"

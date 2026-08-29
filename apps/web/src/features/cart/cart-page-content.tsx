@@ -25,6 +25,7 @@ import {
 import { CartWorkspaceSkeleton } from "./cart-page-skeleton";
 import { FeedbackAlert } from "@/components/feedback/feedback-alert";
 import { getErrorFeedback } from "@/lib/feedback";
+import { StripeTestCheckout } from "./stripe-test-checkout";
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -45,15 +46,20 @@ export function CartPageContent() {
     checkout.reset();
   }
 
-  const errorFeedback = mutationError ? getErrorFeedback(mutationError) : undefined;
-  const errorBanner = errorFeedback && (checkout.isError || errorFeedback.presentation === "inline")
-    ? <FeedbackAlert {...errorFeedback} className="mt-4" />
-    : null;
+  const errorFeedback = mutationError
+    ? getErrorFeedback(mutationError)
+    : undefined;
+  const errorBanner =
+    errorFeedback &&
+    (checkout.isError || errorFeedback.presentation === "inline") ? (
+      <FeedbackAlert {...errorFeedback} className="mt-4" />
+    ) : null;
 
   if (cart.isPending) return <CartWorkspaceSkeleton />;
   if (cart.isError) {
     const feedback = getErrorFeedback(cart.error);
-    if (feedback.presentation === "inline") return <FeedbackAlert {...feedback} />;
+    if (feedback.presentation === "inline")
+      return <FeedbackAlert {...feedback} />;
     return (
       <CartErrorState
         isRetrying={cart.isFetching}
@@ -61,7 +67,13 @@ export function CartPageContent() {
       />
     );
   }
-  if (cart.data.items.length === 0) return <><CartEmptyState />{errorBanner}</>;
+  if (cart.data.items.length === 0)
+    return (
+      <>
+        <CartEmptyState />
+        {errorBanner}
+      </>
+    );
 
   async function createOrder(): Promise<void> {
     resetErrors();
@@ -79,12 +91,23 @@ export function CartPageContent() {
         <div className="surface-card overflow-hidden">
           <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-4 py-4 sm:px-6">
             <div>
-              <h2 id="cart-items-title" className="font-bold text-slate-950">Cart items</h2>
-              <p className="mt-1 text-xs text-slate-500">{cart.data.items.length} {cart.data.items.length === 1 ? "item" : "items"}</p>
+              <h2 id="cart-items-title" className="font-bold text-slate-950">
+                Cart items
+              </h2>
+              <p className="mt-1 text-xs text-slate-500">
+                {cart.data.items.length}{" "}
+                {cart.data.items.length === 1 ? "item" : "items"}
+              </p>
             </div>
             {cart.isFetching ? (
-              <span role="status" className="inline-flex items-center gap-2 text-xs font-semibold text-teal-700">
-                <LoaderCircle className="size-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+              <span
+                role="status"
+                className="inline-flex items-center gap-2 text-xs font-semibold text-teal-700"
+              >
+                <LoaderCircle
+                  className="size-3.5 animate-spin motion-reduce:animate-none"
+                  aria-hidden="true"
+                />
                 Refreshing
               </span>
             ) : null}
@@ -103,7 +126,10 @@ export function CartPageContent() {
                 }}
                 onRemove={() => {
                   resetErrors();
-                  remove.mutate(item.product.id);
+                  remove.mutate({
+                    productId: item.product.id,
+                    product: item.product,
+                  });
                 }}
               />
             ))}
@@ -166,15 +192,26 @@ function CartItemRow({
       </Link>
 
       <div className="min-w-0">
-        <Link href={`/products/${item.product.id}`} className="line-clamp-2 font-bold leading-6 text-slate-950 transition-colors hover:text-teal-700">
+        <Link
+          href={`/products/${item.product.id}`}
+          className="line-clamp-2 font-bold leading-6 text-slate-950 transition-colors hover:text-teal-700"
+        >
           {item.product.title}
         </Link>
         <p className="mt-1 text-xs leading-5 text-slate-500">
-          {item.product.brand ? `${item.product.brand} · ` : ""}{item.product.category.name}
+          {item.product.brand ? `${item.product.brand} · ` : ""}
+          {item.product.category.name}
         </p>
-        <p className="mt-2 text-sm font-semibold text-slate-800 sm:hidden">{money.format(item.lineTotal)}</p>
-        <p className={`mt-2 inline-flex items-center gap-1.5 text-xs font-semibold ${isOutOfStock ? "text-red-700" : "text-emerald-700"}`}>
-          <span className="inline-block size-1.5 rounded-full bg-current" aria-hidden="true" />
+        <p className="mt-2 text-sm font-semibold text-slate-800 sm:hidden">
+          {money.format(item.lineTotal)}
+        </p>
+        <p
+          className={`mt-2 inline-flex items-center gap-1.5 text-xs font-semibold ${isOutOfStock ? "text-red-700" : "text-emerald-700"}`}
+        >
+          <span
+            className="inline-block size-1.5 rounded-full bg-current"
+            aria-hidden="true"
+          />
           {isOutOfStock ? "Out of stock" : `${item.product.stock} in stock`}
         </p>
 
@@ -220,8 +257,12 @@ function CartItemRow({
 
       <div className="col-span-2 flex items-end justify-between gap-4 border-t border-slate-100 pt-4 sm:col-span-1 sm:flex-col sm:items-end sm:border-0 sm:pt-0">
         <div className="text-right">
-          <p className="hidden text-lg font-extrabold text-slate-950 sm:block">{money.format(item.lineTotal)}</p>
-          <p className="mt-1 text-xs text-slate-500">{money.format(item.unitPrice)} each</p>
+          <p className="hidden text-lg font-extrabold text-slate-950 sm:block">
+            {money.format(item.lineTotal)}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            {money.format(item.unitPrice)} each
+          </p>
         </div>
       </div>
     </article>
@@ -238,16 +279,25 @@ function CartSummary({
   readonly onCheckout: () => void;
 }) {
   return (
-    <aside aria-labelledby="order-summary-title" className="surface-card p-5 lg:sticky lg:top-24 sm:p-6">
-      <h2 id="order-summary-title" className="text-lg font-bold text-slate-950">Order summary</h2>
+    <aside
+      aria-labelledby="order-summary-title"
+      className="surface-card p-5 lg:sticky lg:top-24 sm:p-6"
+    >
+      <h2 id="order-summary-title" className="text-lg font-bold text-slate-950">
+        Order summary
+      </h2>
       <dl className="mt-7 space-y-4">
         <div className="flex items-center justify-between gap-4 text-sm text-slate-600">
           <dt>Subtotal</dt>
-          <dd className="font-semibold text-slate-900">{money.format(cart.subtotal)}</dd>
+          <dd className="font-semibold text-slate-900">
+            {money.format(cart.subtotal)}
+          </dd>
         </div>
         <div className="flex items-center justify-between gap-4 border-t border-slate-200 pt-5 text-lg">
           <dt className="font-bold text-slate-950">Total</dt>
-          <dd className="text-xl font-extrabold text-slate-950">{money.format(cart.total)}</dd>
+          <dd className="text-xl font-extrabold text-slate-950">
+            {money.format(cart.total)}
+          </dd>
         </div>
       </dl>
       <button
@@ -257,7 +307,10 @@ function CartSummary({
         className="btn-primary mt-7 min-h-12 w-full"
       >
         {checkoutPending ? (
-          <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+          <LoaderCircle
+            className="size-4 animate-spin motion-reduce:animate-none"
+            aria-hidden="true"
+          />
         ) : (
           <LockKeyhole className="size-4" aria-hidden="true" />
         )}
@@ -267,6 +320,7 @@ function CartSummary({
         <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
         <p>Simulated checkout only. No payment will be processed.</p>
       </div>
+      <StripeTestCheckout />
     </aside>
   );
 }
@@ -277,8 +331,12 @@ function CartEmptyState() {
       <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-teal-50 text-teal-700">
         <PackageOpen className="size-7" aria-hidden="true" />
       </span>
-      <h2 className="mt-5 text-xl font-bold text-slate-950">Your cart is empty</h2>
-      <Link href="/products" className="btn-primary mt-5">Browse products</Link>
+      <h2 className="mt-5 text-xl font-bold text-slate-950">
+        Your cart is empty
+      </h2>
+      <Link href="/products" className="btn-primary mt-5">
+        Browse products
+      </Link>
     </section>
   );
 }
@@ -291,14 +349,27 @@ function CartErrorState({
   readonly isRetrying: boolean;
 }) {
   return (
-    <section role="alert" className="surface-card border-red-200 bg-red-50/80 p-8 text-center">
+    <section
+      role="alert"
+      className="surface-card border-red-200 bg-red-50/80 p-8 text-center"
+    >
       <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-red-100 text-red-800">
         <AlertTriangle className="size-6" aria-hidden="true" />
       </span>
       <h2 className="mt-4 text-lg font-bold text-red-950">Cart unavailable</h2>
-      <p className="mt-2 text-sm text-red-900">The cart is temporarily unavailable.</p>
-      <button type="button" onClick={retry} disabled={isRetrying} className="btn-secondary mt-5 border-red-200 text-red-900">
-        <RefreshCw className={`size-4 ${isRetrying ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden="true" />
+      <p className="mt-2 text-sm text-red-900">
+        The cart is temporarily unavailable.
+      </p>
+      <button
+        type="button"
+        onClick={retry}
+        disabled={isRetrying}
+        className="btn-secondary mt-5 border-red-200 text-red-900"
+      >
+        <RefreshCw
+          className={`size-4 ${isRetrying ? "animate-spin motion-reduce:animate-none" : ""}`}
+          aria-hidden="true"
+        />
         {isRetrying ? "Trying again..." : "Try again"}
       </button>
     </section>

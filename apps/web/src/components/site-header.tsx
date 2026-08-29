@@ -6,6 +6,7 @@ import {
   ChevronDown,
   Heart,
   ListOrdered,
+  LayoutDashboard,
   LogOut,
   Menu,
   MessageCircleMore,
@@ -53,7 +54,10 @@ export function SiteHeader() {
     >
       <div className="mx-auto grid h-[72px] max-w-[1440px] grid-cols-[1fr_auto] items-center px-4 sm:px-6 lg:grid-cols-[1fr_auto_1fr] lg:px-10">
         <BrandLogo />
-        <nav aria-label="Primary navigation" className="hidden items-center gap-2 lg:flex">
+        <nav
+          aria-label="Primary navigation"
+          className="hidden items-center gap-2 lg:flex"
+        >
           <NavigationItems
             pathname={pathname}
             user={user}
@@ -136,30 +140,32 @@ function NavigationItems({
 
   return (
     <>
-      {section !== "auth" ? mainLinks.map((link) => (
-        <Link
-          key={link.href}
-          href={link.href}
-          aria-current={isActive(link.href) ? "page" : undefined}
-          className={`${linkClass} ${
-            isActive(link.href)
-              ? mobile
-                ? "border-teal-200 bg-gradient-to-r from-teal-50 to-cyan-50 text-teal-900 shadow-sm ring-1 ring-inset ring-teal-200/80"
-                : "border-teal-200 bg-gradient-to-br from-teal-50 via-white to-cyan-50 text-teal-900 shadow-[0_8px_24px_rgba(13,148,136,0.14)] ring-1 ring-inset ring-teal-200/80"
-              : ""
-          }`}
-        >
-          <span className="relative z-10">{link.label}</span>
-          <span
-            aria-hidden="true"
-            className={`absolute rounded-full bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 transition-all duration-300 ${
-              mobile
-                ? `inset-y-2 left-0 w-1 ${isActive(link.href) ? "scale-y-100 opacity-100" : "scale-y-0 opacity-0 group-hover:scale-y-75 group-hover:opacity-70"}`
-                : `inset-x-3 bottom-1 h-0.5 origin-center ${isActive(link.href) ? "scale-x-100 opacity-100 shadow-[0_0_8px_rgba(6,182,212,0.55)]" : "scale-x-0 opacity-0 group-hover:scale-x-75 group-hover:opacity-70"}`
-            }`}
-          />
-        </Link>
-      )) : null}
+      {section !== "auth"
+        ? mainLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              aria-current={isActive(link.href) ? "page" : undefined}
+              className={`${linkClass} ${
+                isActive(link.href)
+                  ? mobile
+                    ? "border-teal-200 bg-gradient-to-r from-teal-50 to-cyan-50 text-teal-900 shadow-sm ring-1 ring-inset ring-teal-200/80"
+                    : "border-teal-200 bg-gradient-to-br from-teal-50 via-white to-cyan-50 text-teal-900 shadow-[0_8px_24px_rgba(13,148,136,0.14)] ring-1 ring-inset ring-teal-200/80"
+                  : ""
+              }`}
+            >
+              <span className="relative z-10">{link.label}</span>
+              <span
+                aria-hidden="true"
+                className={`absolute rounded-full bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 transition-all duration-300 ${
+                  mobile
+                    ? `inset-y-2 left-0 w-1 ${isActive(link.href) ? "scale-y-100 opacity-100" : "scale-y-0 opacity-0 group-hover:scale-y-75 group-hover:opacity-70"}`
+                    : `inset-x-3 bottom-1 h-0.5 origin-center ${isActive(link.href) ? "scale-x-100 opacity-100 shadow-[0_0_8px_rgba(6,182,212,0.55)]" : "scale-x-0 opacity-0 group-hover:scale-x-75 group-hover:opacity-70"}`
+                }`}
+              />
+            </Link>
+          ))
+        : null}
       {section !== "main" && user !== null ? (
         <>
           {authLinks.map(({ href, label, icon: Icon }) => (
@@ -236,10 +242,15 @@ function AccountMenu({
             : "grid size-11 cursor-pointer list-none place-items-center rounded-full border border-slate-200 bg-slate-50 text-slate-700 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-teal-200 hover:bg-gradient-to-br hover:from-teal-50 hover:to-cyan-50 hover:text-teal-800 hover:shadow-[0_8px_22px_rgba(13,148,136,0.15)] group-open/account:border-teal-300 group-open/account:bg-gradient-to-br group-open/account:from-teal-50 group-open/account:to-cyan-50 group-open/account:text-teal-900 group-open/account:shadow-[0_8px_24px_rgba(13,148,136,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 motion-reduce:transform-none [&::-webkit-details-marker]:hidden"
         }
       >
-        <UserRound className={mobile ? "size-4" : "size-5"} aria-hidden="true" />
+        <UserRound
+          className={mobile ? "size-4" : "size-5"}
+          aria-hidden="true"
+        />
         {mobile ? (
           <>
-            <span className="min-w-0 flex-1 truncate text-left">{user.name}</span>
+            <span className="min-w-0 flex-1 truncate text-left">
+              {user.name}
+            </span>
             <ChevronDown
               className="size-4 transition-transform group-open/account:rotate-180"
               aria-hidden="true"
@@ -257,9 +268,19 @@ function AccountMenu({
         }
       >
         <div className="border-b border-slate-100 px-3 py-2.5">
-          <p className="truncate text-sm font-bold text-slate-900">{user.name}</p>
+          <p className="truncate text-sm font-bold text-slate-900">
+            {user.name}
+          </p>
           <p className="mt-0.5 truncate text-xs text-slate-500">{user.email}</p>
         </div>
+        {user.role === "ADMIN" ? (
+          <Link
+            href="/admin"
+            className="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-teal-50 hover:text-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+          >
+            <LayoutDashboard className="size-4" aria-hidden="true" /> Dashboard
+          </Link>
+        ) : null}
         <button
           type="button"
           onClick={() => {

@@ -4,6 +4,7 @@ import type {
 } from "@shopmind/contracts";
 import { CheckCircle2, Star } from "lucide-react";
 import { Reveal } from "@/components/ui/reveal";
+import { ReviewSummary } from "./review-summary";
 
 type MetadataRow = readonly [label: string, value: string];
 
@@ -70,6 +71,7 @@ export function ProductDetailContent({
                 {product.rating.toFixed(1)} · {product.reviews.length}
               </span>
             </div>
+            <ReviewSummary productId={product.id} />
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               {product.reviews.map((review, index) => (
                 <ReviewCard key={`${review.reviewerName}-${review.reviewedAt}-${index}`} review={review} />

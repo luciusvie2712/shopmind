@@ -12,6 +12,7 @@ import {
 } from "@/features/wishlist/wishlist.queries";
 import { FeedbackAlert } from "@/components/feedback/feedback-alert";
 import { getErrorFeedback } from "@/lib/feedback";
+import { trackEvent } from "@/lib/telemetry";
 
 export function ProductActions({
   product,
@@ -46,7 +47,12 @@ export function ProductActions({
     if (!requireAuth()) return;
     setActionError(undefined);
     try {
-      await cart.mutateAsync({ productId: product.id, quantity });
+      await cart.mutateAsync({ productId: product.id, quantity, product });
+      trackEvent({
+        type: "ADD_TO_CART",
+        productId: product.id,
+        metadata: { surface: compact ? "product_card" : "product_detail" },
+      });
     } catch (error) {
       setActionError(error);
     }
@@ -64,7 +70,9 @@ export function ProductActions({
 
   return (
     <div className={compact ? "mt-3" : "mt-8"}>
-      <div className={`flex gap-2 ${fullWidth ? "flex-col" : "flex-wrap"} ${iconOnly ? "justify-end" : ""}`}>
+      <div
+        className={`flex gap-2 ${fullWidth ? "flex-col" : "flex-wrap"} ${iconOnly ? "justify-end" : ""}`}
+      >
         <button
           type="button"
           aria-label={

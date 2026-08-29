@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { BackToTop } from "@/components/back-to-top";
-import { QuickContact } from "@/components/quick-contact";
 import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
+import { SiteUtilities } from "@/components/site-utilities";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -21,7 +19,11 @@ type RootLayoutProps = Readonly<{
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en" className="h-full antialiased" data-scroll-behavior="smooth">
+    <html
+      lang="en"
+      className="h-full antialiased"
+      data-scroll-behavior="smooth"
+    >
       <body className="flex min-h-full flex-col">
         <Providers>
           <a
@@ -34,9 +36,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <div id="main-content" tabIndex={-1} className="min-w-0 flex-1">
             {children}
           </div>
-          <SiteFooter />
-          <QuickContact />
-          <BackToTop />
+          <SiteUtilities />
         </Providers>
       </body>
     </html>

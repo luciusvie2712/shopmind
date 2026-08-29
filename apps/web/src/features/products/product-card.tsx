@@ -1,8 +1,8 @@
 import type { ProductSummaryContract } from "@shopmind/contracts";
 import { ArrowUpRight, Star } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { ProductActions } from "./product-actions";
+import { ProductTelemetryLink } from "./product-telemetry-link";
 
 const priceFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -26,7 +26,7 @@ export function ProductCard({
 
   return (
     <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-card transition duration-300 hover:-translate-y-[3px] hover:border-teal-200 hover:shadow-card-hover motion-reduce:transform-none">
-      <Link href={`/products/${product.id}`} className="flex flex-1 flex-col">
+      <ProductTelemetryLink productId={product.id} href={`/products/${product.id}`} className="flex flex-1 flex-col">
         <div
           className={`relative overflow-hidden bg-gradient-to-b from-slate-50 to-white ${featured ? "aspect-[1.08/1]" : "aspect-[1.18/1]"}`}
         >
@@ -91,7 +91,7 @@ export function ProductCard({
             </p>
           ) : null}
         </div>
-      </Link>
+      </ProductTelemetryLink>
       {showActions ? (
         <div className={`${featured ? "px-4 pb-4" : "flex items-end justify-between gap-3 px-5 pb-5 pt-1"}`}>
           {!featured ? (

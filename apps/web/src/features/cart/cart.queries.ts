@@ -1,6 +1,6 @@
 "use client";
 
-import type { CartContract } from "@shopmind/contracts";
+import type { CartContract, ProductSummaryContract } from "@shopmind/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { notify, notifyMutationError } from "@/lib/feedback";
 import {
@@ -27,12 +27,25 @@ export function useAddCartItem() {
     }: {
       productId: string;
       quantity: number;
+      product: ProductSummaryContract;
     }) => addCartItem(productId, quantity),
-    onSuccess: (cart, { productId }) => {
+    onSuccess: (cart, { productId, product, quantity }) => {
       queryClient.setQueryData(cartQueryKey, cart);
-      notify(`cart:add:${productId}`, "success", "Added to cart");
+      notify(`cart:add:${productId}`, "success", "Added to cart", {
+        description: `${product.title} has been added to your cart.`,
+        icon: "cart",
+        action: {
+          label: `View cart${quantity > 1 ? ` (${quantity})` : ""}`,
+          href: "/cart",
+        },
+      });
     },
-    onError: (error, { productId }) => notifyMutationError(error, `cart:add:${productId}`, "Couldn’t update your cart"),
+    onError: (error, { productId }) =>
+      notifyMutationError(
+        error,
+        `cart:add:${productId}`,
+        "Couldn’t update your cart",
+      ),
     onSettled: () => queryClient.invalidateQueries({ queryKey: cartQueryKey }),
   });
 }
@@ -60,7 +73,11 @@ export function useUpdateCartItem() {
     onError: (error, { productId }, context) => {
       if (context?.previous)
         queryClient.setQueryData(cartQueryKey, context.previous);
-      notifyMutationError(error, `cart:update:${productId}`, "Couldn’t update your cart");
+      notifyMutationError(
+        error,
+        `cart:update:${productId}`,
+        "Couldn’t update your cart",
+      );
     },
     onSuccess: (cart) => queryClient.setQueryData(cartQueryKey, cart),
     onSettled: () => queryClient.invalidateQueries({ queryKey: cartQueryKey }),
@@ -70,8 +87,13 @@ export function useUpdateCartItem() {
 export function useRemoveCartItem() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: removeCartItem,
-    onMutate: async (productId) => {
+    mutationFn: ({
+      productId,
+    }: {
+      readonly productId: string;
+      readonly product: ProductSummaryContract;
+    }) => removeCartItem(productId),
+    onMutate: async ({ productId }) => {
       await queryClient.cancelQueries({ queryKey: cartQueryKey });
       const previous = queryClient.getQueryData<CartContract>(cartQueryKey);
       if (previous)
@@ -81,14 +103,22 @@ export function useRemoveCartItem() {
         );
       return { previous };
     },
-    onError: (error, productId, context) => {
+    onError: (error, { productId }, context) => {
       if (context?.previous)
         queryClient.setQueryData(cartQueryKey, context.previous);
-      notifyMutationError(error, `cart:remove:${productId}`, "Couldn’t update your cart");
+      notifyMutationError(
+        error,
+        `cart:remove:${productId}`,
+        "Couldn’t update your cart",
+      );
     },
-    onSuccess: (cart, productId) => {
+    onSuccess: (cart, { productId, product }) => {
       queryClient.setQueryData(cartQueryKey, cart);
-      notify(`cart:remove:${productId}`, "success", "Removed from cart");
+      notify(`cart:remove:${productId}`, "neutral", "Removed from cart", {
+        description: `${product.title} has been removed from your cart.`,
+        icon: "cart",
+        action: { label: "View cart", href: "/cart" },
+      });
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: cartQueryKey }),
   });
@@ -98,14 +128,18 @@ export function useCheckout() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: checkoutCart,
-    onSuccess: () => {
+    onSuccess: (order) => {
       queryClient.setQueryData<CartContract>(cartQueryKey, {
         items: [],
         subtotal: 0,
         total: 0,
       });
       void queryClient.invalidateQueries({ queryKey: ordersQueryKey });
-      notify("checkout", "success", "Order created");
+      notify("checkout", "success", "Checkout successful", {
+        description: `Order ${order.id.slice(0, 8)}… was created successfully.`,
+        icon: "checkout",
+        action: { label: "View orders", href: "/orders" },
+      });
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: cartQueryKey }),
   });
