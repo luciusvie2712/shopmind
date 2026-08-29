@@ -118,8 +118,15 @@ reference.
 
 ## 3. Vercel project
 
-Connect the GitHub repository to Vercel with the repository root as the project
-root. `vercel.json` supplies the monorepo install/build/output commands.
+Connect the GitHub repository to Vercel with `apps/web` as the project Root
+Directory and allow access to source files outside that directory so the pnpm
+workspace can build `packages/contracts`. `apps/web/vercel.json` supplies the
+monorepo install/build commands and uses `.next` relative to that Root
+Directory.
+
+Leave the Vercel Output Directory project setting empty/default. If an override
+is required, set it to `.next`, never `apps/web/.next`; Vercel already resolves
+the value from `/vercel/path0/apps/web`.
 
 Required web variable:
 
