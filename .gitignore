@@ -3,6 +3,8 @@
 # =========================================================================
 /docs/*
 !/docs/08-worker-recovery-runbook.md
+!/docs/v2/
+!/docs/v2/**
 
 .cursorrules
 .clinerules
