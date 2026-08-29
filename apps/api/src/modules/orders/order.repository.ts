@@ -9,6 +9,14 @@ const orderInclude = {
     orderBy: { id: 'asc' as const },
     include: { product: { select: { thumbnail: true } } },
   },
+  payment: true,
+  fulfillment: {
+    include: {
+      events: {
+        orderBy: [{ occurredAt: 'asc' as const }, { id: 'asc' as const }],
+      },
+    },
+  },
 } as const satisfies Prisma.OrderInclude;
 
 export type OrderRecord = Prisma.OrderGetPayload<{
@@ -32,6 +40,13 @@ export class OrderRepository {
       where: { userId },
       include: orderInclude,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    });
+  }
+
+  findOwned(id: string, userId: string): Promise<OrderRecord | null> {
+    return this.prisma.order.findFirst({
+      where: { id, userId },
+      include: orderInclude,
     });
   }
 
@@ -69,10 +84,25 @@ export class OrderRepository {
         },
         include: orderInclude,
       });
+      await tx.payment.create({
+        data: {
+          orderId: order.id,
+          userId,
+          provider: 'SIMULATED',
+          reference: `SM-${order.id}`,
+          idempotencyKey: order.id,
+          status: 'PENDING',
+          amount: checkout.subtotal,
+          currency: 'usd',
+        },
+      });
       await tx.cartItem.deleteMany({
         where: { id: { in: cartItems.map(({ id }) => id) } },
       });
-      return order;
+      return (await tx.order.findUnique({
+        where: { id: order.id },
+        include: orderInclude,
+      }))!;
     });
   }
 }

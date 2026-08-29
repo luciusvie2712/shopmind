@@ -8,12 +8,15 @@ import {
   QUEUE_NAMES,
   type SyncProductsJobData,
   type ReviewSummaryJobData,
+  type FulfillmentTransitionJobData,
 } from './common/queue/queue.constants';
 import { EmbedProductProcessor } from './modules/ingestion/embed-product.processor';
 import { SyncProductsProcessor } from './modules/ingestion/sync-products.processor';
 import { StructuredLogger } from './common/logging/structured-logger';
 import { registerWorkerObservability } from './common/queue/worker-observability';
 import { ReviewSummaryProcessor } from './modules/review-summaries/review-summary.processor';
+import { FulfillmentProcessor } from './modules/fulfillment/fulfillment.processor';
+import { FulfillmentService } from './modules/fulfillment/fulfillment.service';
 
 async function bootstrap(): Promise<void> {
   const logger = new StructuredLogger();
@@ -23,6 +26,8 @@ async function bootstrap(): Promise<void> {
   const syncProducts = application.get(SyncProductsProcessor);
   const embedProduct = application.get(EmbedProductProcessor);
   const reviewSummary = application.get(ReviewSummaryProcessor);
+  const fulfillment = application.get(FulfillmentProcessor);
+  const fulfillmentService = application.get(FulfillmentService);
   const ingestionWorker = new Worker<SyncProductsJobData>(
     QUEUE_NAMES.ingestion,
     async (job) => {
@@ -52,13 +57,34 @@ async function bootstrap(): Promise<void> {
     },
     { connection: queueConnectionOptions(), concurrency: 2 },
   );
-  const workers = [ingestionWorker, embeddingWorker, reviewSummaryWorker];
+  const fulfillmentWorker = new Worker<FulfillmentTransitionJobData>(
+    QUEUE_NAMES.fulfillment,
+    async (job) => {
+      if (job.name !== JOB_NAMES.fulfillmentTransition)
+        throw new Error(`Unsupported fulfillment job: ${job.name}`);
+      await fulfillment.process(job);
+    },
+    { connection: queueConnectionOptions(), concurrency: 4 },
+  );
+  const workers = [
+    ingestionWorker,
+    embeddingWorker,
+    reviewSummaryWorker,
+    fulfillmentWorker,
+  ];
   workers.forEach((worker) => registerWorkerObservability(worker, logger));
 
   let isClosing = false;
+  await fulfillmentService.reconcile();
+  const reconciliationTimer = setInterval(
+    () => void fulfillmentService.reconcile(),
+    60_000,
+  );
+  reconciliationTimer.unref();
   const shutdown = async (): Promise<void> => {
     if (isClosing) return;
     isClosing = true;
+    clearInterval(reconciliationTimer);
     await Promise.all(workers.map((worker) => worker.close()));
     await application.close();
   };

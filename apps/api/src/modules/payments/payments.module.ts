@@ -6,14 +6,20 @@ import { PaymentRepository } from './payment.repository';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
 import { StripePaymentProvider } from './stripe-payment.provider';
+import { FulfillmentModule } from '../fulfillment/fulfillment.module';
+import { DemoPaymentRepository } from './demo-payment.repository';
+import { DemoPaymentsService } from './demo-payments.service';
+import { DemoPaymentsController } from './demo-payments.controller';
 @Module({
-  imports: [AuthModule, RedisModule],
-  controllers: [PaymentsController],
+  imports: [AuthModule, RedisModule, FulfillmentModule],
+  controllers: [PaymentsController, DemoPaymentsController],
   providers: [
     PaymentRateLimitGuard,
     PaymentRepository,
     PaymentsService,
     StripePaymentProvider,
+    DemoPaymentRepository,
+    DemoPaymentsService,
   ],
 })
 export class PaymentsModule {}

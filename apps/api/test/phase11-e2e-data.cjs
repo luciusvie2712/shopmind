@@ -17,6 +17,9 @@ async function cleanup(prisma) {
   const userWhere = { email: { endsWith: E2E_EMAIL_SUFFIX } };
   await prisma.aiRequestLog.deleteMany({ where: { user: userWhere } });
   await prisma.aiConversation.deleteMany({ where: { user: userWhere } });
+  await prisma.fulfillmentEvent.deleteMany({ where: { fulfillment: { order: { user: userWhere } } } });
+  await prisma.fulfillment.deleteMany({ where: { order: { user: userWhere } } });
+  await prisma.payment.deleteMany({ where: { user: userWhere } });
   await prisma.orderItem.deleteMany({ where: { order: { user: userWhere } } });
   await prisma.order.deleteMany({ where: { user: userWhere } });
   await prisma.wishlistItem.deleteMany({ where: { user: userWhere } });

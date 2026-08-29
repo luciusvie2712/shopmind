@@ -1,5 +1,8 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { apiError, registerAndLogin } from "./fixtures";
+
+const activeToasts = (page: Page) =>
+  page.locator('[data-sonner-toast][data-removed="false"]');
 
 test("auth, wishlist, cart, checkout, orders, and logout use the real API", async ({
   page,
@@ -12,7 +15,7 @@ test("auth, wishlist, cart, checkout, orders, and logout use the real API", asyn
   await product.getByTitle("Add to wishlist").click();
   await expect(product.getByTitle("Remove from wishlist")).toBeVisible();
   await product.getByTitle("Add to cart").click();
-  await expect(page.locator('[data-sonner-toast][data-type="success"]').filter({ hasText: "Added to cart" })).toBeVisible();
+  await expect(activeToasts(page).filter({ hasText: "Added to cart" })).toBeVisible();
 
   await page.goto("/wishlist");
   await expect(
@@ -50,14 +53,22 @@ test("auth, wishlist, cart, checkout, orders, and logout use the real API", asyn
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
       .toBe(true);
   }
-  await page.getByRole("button", { name: "Create simulated order" }).click();
-  await page.waitForURL("**/orders");
+  await page.getByRole("button", { name: "Đặt mua" }).click();
+  await page.waitForURL("**/orders/*");
+  await expect(page.getByText("Thanh toán mô phỏng — không thực hiện giao dịch thật.")).toBeVisible();
+  await expect(
+    page.getByRole("img", { name: "Mã QR thanh toán mô phỏng ShopMind" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Thanh toán", exact: true }).click();
+  await expect(page.getByText("Thanh toán thành công", { exact: true })).toBeVisible();
+  await expect(page.getByText("Đã nhận đơn hàng", { exact: true })).toBeVisible();
+  await page.goto("/orders");
   await expect(page.getByRole("heading", { name: "Orders" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Order history" })).toBeVisible();
   const orderCard = page.getByRole("article").filter({
     hasText: "Phase 11 Developer Laptop",
   });
-  await expect(orderCard.getByText("Order created", { exact: true })).toBeVisible();
+  await expect(orderCard.getByText("PAID", { exact: true })).toBeVisible();
   await expect(orderCard.getByRole("link", { name: "View Phase 11 Developer Laptop" })).toBeVisible();
   await expect(orderCard.getByText("Qty 2", { exact: true })).toBeVisible();
   await expect(orderCard.getByText("$899.00 each", { exact: true })).toBeVisible();
@@ -92,7 +103,7 @@ test("failed optimistic wishlist mutation rolls back", async ({ page }) => {
   });
   await product.getByTitle("Add to wishlist").click();
   await expect(product.getByTitle("Add to wishlist")).toBeVisible();
-  await expect(page.locator('[data-sonner-toast][data-type="error"]')).toContainText("Couldn’t update your wishlist");
+  await expect(activeToasts(page)).toContainText("Couldn’t update your wishlist");
 });
 
 test("failed optimistic wishlist removal restores the canonical item", async ({
@@ -128,7 +139,7 @@ test("failed optimistic wishlist removal restores the canonical item", async ({
   await expect(
     page.getByRole("link", { name: "Phase 11 Developer Laptop", exact: true }),
   ).toBeVisible();
-  await expect(page.locator('[data-sonner-toast][data-type="error"]')).toContainText(
+  await expect(activeToasts(page)).toContainText(
     "Couldn’t update your wishlist",
   );
 });
@@ -228,7 +239,7 @@ test("failed optimistic cart mutation rolls back", async ({ page }) => {
   await expect(page.locator("main").getByRole("alert")).toContainText(
     "Stock changed",
   );
-  await expect(page.locator('[data-sonner-toast][data-type="success"]')).toHaveCount(0);
+  await expect(activeToasts(page).filter({ hasText: "Added to cart" })).toHaveCount(0);
 });
 
 test("failed optimistic cart removal restores the canonical item", async ({ page }) => {
@@ -258,7 +269,7 @@ test("failed optimistic cart removal restores the canonical item", async ({ page
   await expect(
     page.getByRole("link", { name: "Phase 11 Developer Laptop", exact: true }),
   ).toBeVisible();
-  await expect(page.locator('[data-sonner-toast][data-type="error"]')).toContainText(
+  await expect(activeToasts(page)).toContainText(
     "Couldn’t update your cart",
   );
 });

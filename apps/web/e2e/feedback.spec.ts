@@ -167,11 +167,11 @@ test("checkout conflict stays inline and success keeps navigation with a toast",
       : route.fulfill({ json: { id: "50000000-0000-4000-8000-000000000001", status: "CREATED", subtotal: 899, total: 899, createdAt: "2026-01-01T00:00:00.000Z", items: [] } });
   });
   await page.goto("/cart");
-  await page.getByRole("button", { name: "Create simulated order" }).click();
+  await page.getByRole("button", { name: "Đặt mua" }).click();
   await expect(page.locator("main").getByRole("alert")).toContainText("Stock changed");
   await expect(activeToasts(page)).toHaveCount(0);
-  await page.getByRole("button", { name: "Create simulated order" }).click();
-  await page.waitForURL("**/orders");
-  await expect(activeToasts(page)).toHaveText(/Order created/);
+  await page.getByRole("button", { name: "Đặt mua" }).click();
+  await page.waitForURL("**/orders/*");
+  await expect(activeToasts(page)).toHaveText(/Checkout successful/);
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });

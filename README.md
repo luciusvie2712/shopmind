@@ -35,6 +35,7 @@ Implemented capabilities include:
 - PostgreSQL-backed catalog, categories, product details, filters, sorting,
   pagination, and keyword search;
 - cart, wishlist, simulated checkout, and immutable order snapshots;
+- backend-authoritative demo payment with a clearly fake local QR and a persistent BullMQ-driven 90-second fulfillment timeline;
 - pgvector semantic retrieval and deterministic hybrid ranking;
 - Gemini-backed structured intent, grounded AI search, compare, and a
   read-only shopping assistant;
@@ -156,6 +157,7 @@ cp .env.example .env
 | Gemini | `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_EMBEDDING_MODEL`, `GEMINI_EMBEDDING_DIMENSION` |
 | AI runtime | `AI_TIMEOUT_MS`, `AI_MAX_TOOL_STEPS` |
 | Applications | `API_PORT`, `WEB_ORIGIN`, `SHOPMIND_API_BASE_URL`, `NODE_ENV` |
+| Demo commerce | `DEMO_PAYMENT_ENABLED`, `DEMO_FULFILLMENT_ENABLED`, `DEMO_FULFILLMENT_RECEIVED_TO_TRANSIT_MS`, `DEMO_FULFILLMENT_TRANSIT_TO_OUT_FOR_DELIVERY_MS`, `DEMO_FULFILLMENT_OUT_FOR_DELIVERY_TO_FINAL_MS`, `DEMO_FULFILLMENT_DEFAULT_SCENARIO` |
 
 Real `.env` files must not be committed. Server secrets must never use a
 `NEXT_PUBLIC_` prefix. The embedding dimension is fixed at `768`; startup
@@ -365,8 +367,17 @@ credentials or privileged account are committed.
    product data, call out the honest no-hard-match/fallback state.
 5. Select three returned products and open `/compare`; identify the canonical
    comparison table separately from the grounded AI summary.
-6. Add a product to wishlist and cart through the normal UI, run the simulated
-   checkout, and open `/orders` to show the created immutable snapshots.
+6. Add a product to wishlist and cart, click `Đặt mua`, and open the created
+   `/orders/[id]` page. The shown amount and demo QR come from the persisted order.
+7. Choose success or failure, click `Thanh toán`, and watch PostgreSQL-backed
+   fulfillment advance at T+00/T+20/T+55/T+90 seconds. Refreshing or closing the
+   browser does not stop BullMQ processing.
+
+The payment and shipping flow is a portfolio simulation only. It never uses a
+real bank QR, card, wallet, courier, or financial deep link. Production demo
+runtimes intentionally enable it with explicit `DEMO_*` flags; `NODE_ENV` does
+not control availability. Configure the same timing values on both API and
+worker services.
 
 The assistant may recommend and read product/user context, but it cannot
 perform any of the wishlist, cart, checkout, or order mutations in this flow.

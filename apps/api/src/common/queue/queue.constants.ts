@@ -4,12 +4,14 @@ export const QUEUE_NAMES = {
   ingestion: 'ingestion',
   embedding: 'embedding',
   reviewSummary: 'review-summary',
+  fulfillment: 'fulfillment',
 } as const;
 
 export const JOB_NAMES = {
   syncProducts: 'SYNC_PRODUCTS',
   embedProduct: 'EMBED_PRODUCT',
   summarizeReviews: 'SUMMARIZE_REVIEWS',
+  fulfillmentTransition: 'FULFILLMENT_TRANSITION',
 } as const;
 
 export const SYNC_PRODUCTS_OPTIONS = {
@@ -36,6 +38,26 @@ export interface EmbedProductJobData {
 export interface ReviewSummaryJobData {
   readonly productId: string;
   readonly reviewSetHash: string;
+}
+
+export interface FulfillmentTransitionJobData {
+  readonly fulfillmentId: string;
+  readonly targetStatus:
+    'IN_TRANSIT' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'DELIVERY_FAILED';
+  readonly scheduledFor: string;
+}
+
+export const FULFILLMENT_TRANSITION_OPTIONS = {
+  attempts: 3,
+  backoff: { type: 'exponential', delay: 2_000 },
+  removeOnComplete: { age: 86_400, count: 500 },
+  removeOnFail: { age: 604_800, count: 500 },
+} as const satisfies JobsOptions;
+
+export function fulfillmentTransitionJobId(
+  data: Pick<FulfillmentTransitionJobData, 'fulfillmentId' | 'targetStatus'>,
+): string {
+  return `fulfillment:${data.fulfillmentId}:${data.targetStatus}`;
 }
 
 export const REVIEW_SUMMARY_OPTIONS = {

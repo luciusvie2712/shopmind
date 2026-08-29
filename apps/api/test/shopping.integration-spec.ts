@@ -5,6 +5,8 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/common/database/prisma.service';
 import { configureHttpApplication } from '../src/common/http/configure-http-application';
+import { FulfillmentStatus } from '@prisma/client';
+import { FulfillmentService } from '../src/modules/fulfillment/fulfillment.service';
 
 const silentLogger: LoggerService = {
   log: () => undefined,
@@ -55,6 +57,9 @@ describe('Phase 5 shopping integration', () => {
   });
 
   async function cleanup(): Promise<void> {
+    await prisma.fulfillmentEvent.deleteMany({ where: { fulfillment: { order: { user: { email: { endsWith: '@phase5.test' } } } } } });
+    await prisma.fulfillment.deleteMany({ where: { order: { user: { email: { endsWith: '@phase5.test' } } } } });
+    await prisma.payment.deleteMany({ where: { user: { email: { endsWith: '@phase5.test' } } } });
     await prisma.orderItem.deleteMany({
       where: { order: { user: { email: { endsWith: '@phase5.test' } } } },
     });
@@ -190,6 +195,7 @@ describe('Phase 5 shopping integration', () => {
       .expect(201);
     expect(checkout.body).toMatchObject({
       status: 'CREATED',
+      paymentStatus: 'PENDING',
       subtotal: 39.98,
       total: 39.98,
       items: [
@@ -203,6 +209,7 @@ describe('Phase 5 shopping integration', () => {
       ],
     });
     expect(await prisma.cartItem.count()).toBe(0);
+    expect(await prisma.payment.count()).toBe(1);
     expect(
       (await prisma.product.findUniqueOrThrow({ where: { id: product.id } }))
         .stock,
@@ -248,6 +255,38 @@ describe('Phase 5 shopping integration', () => {
     });
     expect(await prisma.order.count()).toBe(0);
     expect(await prisma.cartItem.count()).toBe(1);
+  });
+
+  it('confirms owned demo payment idempotently and persists a failure timeline', async () => {
+    const accessToken = await token('demo-payment@phase5.test');
+    await request(app.getHttpServer()).post('/api/v1/cart/items').set(authorized(accessToken)).send({ productId: product.id, quantity: 1 }).expect(201);
+    const checkout = await request(app.getHttpServer()).post('/api/v1/orders/checkout').set(authorized(accessToken)).expect(201);
+    const orderId = String(checkout.body.id);
+    const detail = await request(app.getHttpServer()).get(`/api/v1/orders/${orderId}`).set(authorized(accessToken)).expect(200);
+    expect(detail.body.payment).toMatchObject({ provider: 'SIMULATED', status: 'PENDING', amount: 19.99, currency: 'USD' });
+    expect(detail.body.payment.qrPayload).toContain('NO_REAL_TRANSACTION=true');
+
+    const otherToken = await token('demo-payment-other@phase5.test');
+    await request(app.getHttpServer()).get(`/api/v1/orders/${orderId}`).set(authorized(otherToken)).expect(404);
+    await request(app.getHttpServer()).post(`/api/v1/orders/${orderId}/payment/simulate-success`).set(authorized(otherToken)).send({ deliveryScenario: 'SUCCESS' }).expect(404);
+
+    const first = await request(app.getHttpServer()).post(`/api/v1/orders/${orderId}/payment/simulate-success`).set(authorized(accessToken)).send({ deliveryScenario: 'FAILURE' }).expect(201);
+    const second = await request(app.getHttpServer()).post(`/api/v1/orders/${orderId}/payment/simulate-success`).set(authorized(accessToken)).send({ deliveryScenario: 'SUCCESS' }).expect(201);
+    expect(first.body).toMatchObject({ payment: { status: 'PAID', amount: 19.99 }, fulfillment: { status: 'ORDER_RECEIVED', scenario: 'FAILURE' } });
+    expect(second.body.fulfillment.id).toBe(first.body.fulfillment.id);
+    expect(second.body.fulfillment.scenario).toBe('FAILURE');
+    expect(await prisma.payment.count({ where: { orderId } })).toBe(1);
+    expect(await prisma.fulfillment.count({ where: { orderId } })).toBe(1);
+
+    const service = app.get(FulfillmentService);
+    const fulfillmentId = String(first.body.fulfillment.id);
+    await service.transition(fulfillmentId, FulfillmentStatus.IN_TRANSIT);
+    await service.transition(fulfillmentId, FulfillmentStatus.IN_TRANSIT);
+    await service.transition(fulfillmentId, FulfillmentStatus.OUT_FOR_DELIVERY);
+    await service.transition(fulfillmentId, FulfillmentStatus.DELIVERY_FAILED);
+    expect(await prisma.fulfillmentEvent.count({ where: { fulfillmentId } })).toBe(4);
+    const finalDetail = await request(app.getHttpServer()).get(`/api/v1/orders/${orderId}`).set(authorized(accessToken)).expect(200);
+    expect(finalDetail.body.fulfillment.timeline.map((event: { status: string }) => event.status)).toEqual(['ORDER_RECEIVED', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERY_FAILED']);
   });
 
   it('serializes concurrent checkout attempts through the cart-item row lock', async () => {

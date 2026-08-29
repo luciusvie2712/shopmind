@@ -1,4 +1,8 @@
-import type { OrderContract, OrderListContract } from '@shopmind/contracts';
+import type {
+  OrderContract,
+  OrderDetailContract,
+  OrderListContract,
+} from '@shopmind/contracts';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ApiException } from '../../common/errors/api.exception';
 import { ERROR_CODES } from '../../common/errors/error-code';
@@ -6,7 +10,7 @@ import {
   CheckoutOutOfStockError,
   CheckoutProductMissingError,
 } from './order-calculation';
-import { toOrderContract } from './order.mapper';
+import { toOrderContract, toOrderDetailContract } from './order.mapper';
 import { EmptyCartError, OrderRepository } from './order.repository';
 
 @Injectable()
@@ -39,5 +43,17 @@ export class OrdersService {
       }
       throw error;
     }
+  }
+
+  async detail(orderId: string, userId: string): Promise<OrderDetailContract> {
+    const order = await this.orderRepository.findOwned(orderId, userId);
+    if (!order)
+      throw new ApiException(ERROR_CODES.ORDER_NOT_FOUND, 'Order not found');
+    if (!order.payment || order.payment.provider !== 'SIMULATED')
+      throw new ApiException(
+        ERROR_CODES.PAYMENT_NOT_AVAILABLE,
+        'Simulated payment is not available for this order',
+      );
+    return toOrderDetailContract(order);
   }
 }

@@ -15,6 +15,7 @@ Last updated: 2026-08-29
 | 16.7 | Multimodal | IN_PROGRESS | transient image-upload endpoint/UI; Gemini multimodal query embedding; parameterized vector search | file-validation unit tests; typecheck/build | Product-image async embedding/indexing and relevance evaluation remain incomplete; live model/quota smoke needs credentials. |
 | 16.8 | Commerce source | BLOCKED_EXTERNAL | source-provider contract and DummyJSON adapter | adapter contract unit test and ingestion regression suites | Repository boundary is complete; no real provider can be implemented without provider selection, API contract and credentials. |
 | 16.9 | Stripe test mode | BLOCKED_EXTERNAL | payment/webhook migration; server-authoritative intent/webhook flow; Payment Element UI | signature unit tests; migration/typecheck/build/regression gates | Stripe test keys and public webhook registration are required for an end-to-end payment transition test. |
+| 16.9A | Demo payment & fulfillment simulation | PASS | `20260829130000_phase16_9a_demo_payment_fulfillment`; payment/fulfillment API, BullMQ worker, `/orders/[id]` | 183 unit, 52 integration, 40 browser tests; realtime 20/55/90-second smoke | Extends the existing Payment boundary with a production-enabled simulated provider; PostgreSQL is canonical, confirmation is idempotent and the worker reconciles persisted active flows after restart. Production deployment smoke remains external. |
 | 16.10 | Final QA / release | BLOCKED_EXTERNAL | Windows E2E runner fixes and v2 documentation | local lint/typecheck/unit/integration/build gates pass; full browser suite 39/39 passes | Production smoke and the blocked provider/payment gates prevent a v2 release PASS decision. |
 
 ## Baseline evidence
@@ -28,10 +29,28 @@ Last updated: 2026-08-29
 
 - `pnpm lint`: PASS.
 - `pnpm typecheck`: PASS.
-- `pnpm test`: PASS, 46 suites / 161 tests.
-- `pnpm test:integration` with PostgreSQL `localhost:5433` and isolated Redis DB 15: PASS, 9 suites / 48 tests.
+- `pnpm test`: PASS, 51 suites / 183 tests.
+- `pnpm test:integration` with PostgreSQL `localhost:5433` and isolated Redis DB 15: PASS, 10 suites / 52 tests (one explicit realtime smoke is skipped in the normal suite).
 - `pnpm build`: PASS for contracts, API and web.
-- Browser E2E: PASS, 39/39 Playwright tests after fixing Windows process launch, Nest build entry-point resolution, SSE fixtures and stale-port readiness detection.
+- Browser E2E: PASS, 40/40 Playwright tests, including checkout navigation, canonical demo QR, payment confirmation and persisted order status.
+- Realtime fulfillment smoke with `RUN_DEMO_FULFILLMENT_90S_SMOKE=true`: PASS for SUCCESS and FAILURE at configured 20/55/90-second offsets, including a worker restart and reconciliation mid-flow.
+
+## Phase 16.9A — Demo Payment & Fulfillment Simulation
+
+| Area | Status | Evidence / remaining work |
+|---|---|---|
+| Database | PASS | Forward migration extends `payments` and adds normalized `fulfillments` / append-only `fulfillment_events` with required uniqueness and indexes. |
+| Contracts | PASS | Shared order detail, payment presentation, scenarios, statuses and simulation contracts are typed and frontend-validated. |
+| Backend payment | PASS | Checkout creates PENDING demo payment atomically; authenticated ownership and idempotent row-locked confirmation preserve canonical amount and immutable scenario. |
+| Fulfillment | PASS | One central state machine enforces SUCCESS and FAILURE paths; PostgreSQL stores current state and ordered timeline events. |
+| Queue | PASS | Dedicated deterministic BullMQ jobs use absolute schedule targets, bounded retry/backoff and stable job IDs. |
+| Worker | PASS | Dedicated processor plus startup/periodic reconciliation recovers missing delayed jobs and keeps transitions idempotent. |
+| Frontend | PASS | `/orders/[id]` renders canonical QR/amount, required disclaimer, scenario selection, disabled/loading payment action, persisted timeline and terminal-aware polling. |
+| Tests | PASS | State/schedule/QR unit coverage, ownership/idempotency/API integration, real BullMQ sequencing/recovery and full Playwright regression coverage pass. |
+| Local smoke | PASS | Both terminal scenarios reached configured 20/55/90-second transitions in one 90-second run; worker restart and reconciliation were observed. |
+| Production config | PASS | Shared API/worker `DEMO_*` contract is validated, documented and wired in Docker; feature enablement is not derived from `NODE_ENV`. |
+| Production smoke | BLOCKED_EXTERNAL | Requires access to the deployed API, worker, PostgreSQL and Redis; procedure is recorded in `EXTERNAL_ACTIONS_REQUIRED.md`. |
+| Blockers | NONE | No repository or local-runtime blocker remains for Phase 16.9A. |
 
 ## Release decision
 

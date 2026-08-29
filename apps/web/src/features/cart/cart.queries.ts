@@ -138,7 +138,7 @@ export function useCheckout() {
       notify("checkout", "success", "Checkout successful", {
         description: `Order ${order.id.slice(0, 8)}… was created successfully.`,
         icon: "checkout",
-        action: { label: "View orders", href: "/orders" },
+        action: { label: "Thanh toán", href: `/orders/${order.id}` },
       });
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: cartQueryKey }),

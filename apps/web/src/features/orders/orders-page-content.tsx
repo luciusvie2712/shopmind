@@ -121,7 +121,7 @@ function OrderCard({ order, index }: { readonly order: OrderContract; readonly i
           <PackageCheck className="size-4 text-teal-700" aria-hidden="true" />
           {order.items.length} {order.items.length === 1 ? "product" : "products"} in this order
         </p>
-        <p>Subtotal <strong className="ml-2 text-sm text-slate-800">{money.format(order.subtotal)}</strong></p>
+        <div className="flex items-center gap-4"><p>Subtotal <strong className="ml-2 text-sm text-slate-800">{money.format(order.subtotal)}</strong></p><Link href={`/orders/${order.id}`} className="font-bold text-teal-700">Xem chi tiết →</Link></div>
       </footer>
     </article>
   );

@@ -17,8 +17,28 @@ describe('production environment validation', () => {
       nodeEnv: 'production',
       webOrigin: 'https://app.shopmind.example',
       auth: { cookieSecure: true },
+      demo: {
+        paymentEnabled: true,
+        fulfillmentEnabled: true,
+        receivedToTransitMs: 20_000,
+        transitToOutForDeliveryMs: 35_000,
+        outForDeliveryToFinalMs: 35_000,
+        defaultScenario: 'SUCCESS',
+      },
     });
   });
+
+  it.each(['999', '600001', '0', '-1'])(
+    'rejects unsafe fulfillment duration %s',
+    (duration) => {
+      expect(() =>
+        parseEnvironment({
+          ...productionEnvironment,
+          DEMO_FULFILLMENT_RECEIVED_TO_TRANSIT_MS: duration,
+        }),
+      ).toThrow('DEMO_FULFILLMENT_RECEIVED_TO_TRANSIT_MS');
+    },
+  );
 
   it.each([
     ['COOKIE_SECURE', { COOKIE_SECURE: 'false' }],

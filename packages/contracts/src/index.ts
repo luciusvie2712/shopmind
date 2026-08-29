@@ -4,6 +4,11 @@ export type ApiErrorCode =
   | "FORBIDDEN"
   | "PRODUCT_NOT_FOUND"
   | "OUT_OF_STOCK"
+  | "ORDER_NOT_FOUND"
+  | "PAYMENT_SIMULATION_DISABLED"
+  | "PAYMENT_NOT_AVAILABLE"
+  | "FULFILLMENT_NOT_AVAILABLE"
+  | "INVALID_FULFILLMENT_TRANSITION"
   | "AI_INVALID_OUTPUT"
   | "AI_PROVIDER_TIMEOUT"
   | "AI_RATE_LIMITED"
@@ -236,6 +241,8 @@ export interface OrderContract {
   readonly total: number;
   readonly createdAt: string;
   readonly items: readonly OrderItemContract[];
+  readonly paymentStatus?: PaymentStatusContract | null;
+  readonly fulfillmentStatus?: FulfillmentStatus | null;
 }
 
 export interface OrderListContract {
@@ -360,7 +367,57 @@ export interface AdminOrderListContract extends AdminPaginationContract {
 }
 
 export type PaymentStatusContract =
-  "REQUIRES_PAYMENT" | "PROCESSING" | "SUCCEEDED" | "FAILED" | "CANCELED";
+  "PENDING" | "PAID" | "REQUIRES_PAYMENT" | "PROCESSING" | "SUCCEEDED" | "FAILED" | "CANCELED";
+
+export type PaymentProvider = "SIMULATED" | "STRIPE_TEST";
+export type FulfillmentStatus =
+  | "ORDER_RECEIVED"
+  | "IN_TRANSIT"
+  | "OUT_FOR_DELIVERY"
+  | "DELIVERED"
+  | "DELIVERY_FAILED";
+export type FulfillmentScenario = "SUCCESS" | "FAILURE";
+
+export interface OrderPaymentSummary {
+  readonly id: string;
+  readonly provider: PaymentProvider;
+  readonly status: PaymentStatusContract;
+  readonly amount: number;
+  readonly currency: string;
+  readonly reference: string;
+  readonly qrPayload: string;
+  readonly paidAt: string | null;
+}
+
+export interface FulfillmentTimelineEvent {
+  readonly status: FulfillmentStatus;
+  readonly occurredAt: string;
+}
+
+export interface FulfillmentSummary {
+  readonly id: string;
+  readonly status: FulfillmentStatus;
+  readonly scenario: FulfillmentScenario;
+  readonly startedAt: string;
+  readonly completedAt: string | null;
+  readonly expectedCompletionAt: string;
+  readonly timeline: readonly FulfillmentTimelineEvent[];
+}
+
+export interface OrderDetailContract extends OrderContract {
+  readonly currency: string;
+  readonly payment: OrderPaymentSummary;
+  readonly fulfillment: FulfillmentSummary | null;
+}
+
+export interface SimulatePaymentRequest {
+  readonly deliveryScenario?: FulfillmentScenario;
+}
+
+export interface SimulatePaymentResponse {
+  readonly payment: OrderPaymentSummary;
+  readonly fulfillment: FulfillmentSummary;
+}
 
 export interface AdminPaymentListContract extends AdminPaginationContract {
   readonly items: readonly {
@@ -489,7 +546,7 @@ export interface PaymentContract {
   readonly id: string;
   readonly orderId: string;
   readonly status:
-    "REQUIRES_PAYMENT" | "PROCESSING" | "SUCCEEDED" | "FAILED" | "CANCELED";
+    "PENDING" | "PAID" | "REQUIRES_PAYMENT" | "PROCESSING" | "SUCCEEDED" | "FAILED" | "CANCELED";
   readonly amount: number;
   readonly currency: string;
   readonly clientSecret?: string;

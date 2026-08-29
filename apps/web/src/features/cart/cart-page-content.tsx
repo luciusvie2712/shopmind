@@ -78,8 +78,8 @@ export function CartPageContent() {
   async function createOrder(): Promise<void> {
     resetErrors();
     try {
-      await checkout.mutateAsync();
-      router.push("/orders");
+      const order = await checkout.mutateAsync();
+      router.push(`/orders/${order.id}`);
     } catch {
       // The mutation state renders the authoritative backend error below.
     }
@@ -314,11 +314,11 @@ function CartSummary({
         ) : (
           <LockKeyhole className="size-4" aria-hidden="true" />
         )}
-        {checkoutPending ? "Creating order..." : "Create simulated order"}
+        {checkoutPending ? "Đang đặt mua..." : "Đặt mua"}
       </button>
       <div className="mt-5 flex items-start gap-3 rounded-xl bg-teal-50 p-4 text-xs leading-5 text-teal-900">
         <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-        <p>Simulated checkout only. No payment will be processed.</p>
+        <p>Thanh toán mô phỏng — không thực hiện giao dịch thật.</p>
       </div>
       <StripeTestCheckout />
     </aside>

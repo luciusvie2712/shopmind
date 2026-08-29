@@ -34,6 +34,8 @@ import type {
   AdminPaymentListContract,
   AdminProductListContract,
   AdminUserListContract,
+  OrderDetailContract,
+  SimulatePaymentResponse,
 } from "@shopmind/contracts";
 import { z } from "zod";
 import {
@@ -64,6 +66,8 @@ import {
   adminPaymentListSchema,
   adminProductListSchema,
   adminUserListSchema,
+  orderDetailSchema,
+  simulatePaymentResponseSchema,
 } from "./schemas";
 
 export type ApiClientErrorCode =
@@ -316,6 +320,23 @@ export function checkoutCart(): Promise<OrderContract> {
     method: "POST",
     schema: orderSchema,
     auth: true,
+  });
+}
+
+export function getOrderDetail(orderId: string): Promise<OrderDetailContract> {
+  return apiRequest(`orders/${encodeURIComponent(orderId)}`, {
+    method: "GET",
+    schema: orderDetailSchema,
+    auth: true,
+  });
+}
+
+export function simulateDemoPayment(orderId: string, deliveryScenario: "SUCCESS" | "FAILURE"): Promise<SimulatePaymentResponse> {
+  return apiRequest(`orders/${encodeURIComponent(orderId)}/payment/simulate-success`, {
+    method: "POST",
+    schema: simulatePaymentResponseSchema,
+    auth: true,
+    json: { deliveryScenario },
   });
 }
 

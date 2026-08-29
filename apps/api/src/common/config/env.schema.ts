@@ -8,6 +8,10 @@ const positiveInteger = z
   .transform(Number)
   .pipe(z.number().int().positive());
 
+const demoTransitionDuration = positiveInteger.pipe(
+  z.number().min(1_000).max(600_000),
+);
+
 const databaseUrl = z
   .string()
   .url('must be a valid URL')
@@ -66,6 +70,23 @@ const environmentSchema = z
       .string()
       .regex(/^[a-z]{3}$/)
       .default('usd'),
+    DEMO_PAYMENT_ENABLED: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((value) => value === 'true'),
+    DEMO_FULFILLMENT_ENABLED: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((value) => value === 'true'),
+    DEMO_FULFILLMENT_RECEIVED_TO_TRANSIT_MS:
+      demoTransitionDuration.default(20_000),
+    DEMO_FULFILLMENT_TRANSIT_TO_OUT_FOR_DELIVERY_MS:
+      demoTransitionDuration.default(35_000),
+    DEMO_FULFILLMENT_OUT_FOR_DELIVERY_TO_FINAL_MS:
+      demoTransitionDuration.default(35_000),
+    DEMO_FULFILLMENT_DEFAULT_SCENARIO: z
+      .enum(['SUCCESS', 'FAILURE'])
+      .default('SUCCESS'),
     API_PORT: positiveInteger
       .refine((value) => value <= 65_535, 'must be at most 65535')
       .default(4000),
@@ -162,6 +183,14 @@ export interface AppConfig {
     readonly webhookSecret?: string;
     readonly currency: string;
   };
+  readonly demo: {
+    readonly paymentEnabled: boolean;
+    readonly fulfillmentEnabled: boolean;
+    readonly receivedToTransitMs: number;
+    readonly transitToOutForDeliveryMs: number;
+    readonly outForDeliveryToFinalMs: number;
+    readonly defaultScenario: 'SUCCESS' | 'FAILURE';
+  };
 }
 
 export function parseEnvironment(environment: NodeJS.ProcessEnv): AppConfig {
@@ -215,6 +244,16 @@ export function parseEnvironment(environment: NodeJS.ProcessEnv): AppConfig {
         ? {}
         : { webhookSecret: values.STRIPE_WEBHOOK_SECRET }),
       currency: values.STRIPE_CURRENCY,
+    },
+    demo: {
+      paymentEnabled: values.DEMO_PAYMENT_ENABLED,
+      fulfillmentEnabled: values.DEMO_FULFILLMENT_ENABLED,
+      receivedToTransitMs: values.DEMO_FULFILLMENT_RECEIVED_TO_TRANSIT_MS,
+      transitToOutForDeliveryMs:
+        values.DEMO_FULFILLMENT_TRANSIT_TO_OUT_FOR_DELIVERY_MS,
+      outForDeliveryToFinalMs:
+        values.DEMO_FULFILLMENT_OUT_FOR_DELIVERY_TO_FINAL_MS,
+      defaultScenario: values.DEMO_FULFILLMENT_DEFAULT_SCENARIO,
     },
     apiPort: values.API_PORT,
     webOrigin: values.WEB_ORIGIN,

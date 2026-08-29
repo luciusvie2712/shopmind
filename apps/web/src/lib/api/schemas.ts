@@ -7,6 +7,7 @@ import type {
   CartContract,
   CategoryContract,
   OrderContract,
+  OrderDetailContract,
   OrderListContract,
   ProductDetailContract,
   ProductListContract,
@@ -21,6 +22,7 @@ import type {
   AdminPaymentListContract,
   AdminProductListContract,
   AdminUserListContract,
+  SimulatePaymentResponse,
 } from "@shopmind/contracts";
 import { z } from "zod";
 
@@ -37,6 +39,11 @@ export const apiErrorResponseSchema: z.ZodType<ApiErrorResponse> = z.object({
       "FORBIDDEN",
       "PRODUCT_NOT_FOUND",
       "OUT_OF_STOCK",
+      "ORDER_NOT_FOUND",
+      "PAYMENT_SIMULATION_DISABLED",
+      "PAYMENT_NOT_AVAILABLE",
+      "FULFILLMENT_NOT_AVAILABLE",
+      "INVALID_FULFILLMENT_TRANSITION",
       "AI_INVALID_OUTPUT",
       "AI_PROVIDER_TIMEOUT",
       "AI_RATE_LIMITED",
@@ -86,6 +93,8 @@ const adminPersonSchema = z.object({
   email: z.string().email(),
 });
 const paymentStatusSchema = z.enum([
+  "PENDING",
+  "PAID",
   "REQUIRES_PAYMENT",
   "PROCESSING",
   "SUCCEEDED",
@@ -321,6 +330,8 @@ export const paymentSchema = z.object({
   id: z.string().uuid(),
   orderId: z.string().uuid(),
   status: z.enum([
+    "PENDING",
+    "PAID",
     "REQUIRES_PAYMENT",
     "PROCESSING",
     "SUCCEEDED",
@@ -421,6 +432,46 @@ export const orderSchema: z.ZodType<OrderContract> = z.object({
       lineTotal: z.number().nonnegative(),
     }),
   ),
+  paymentStatus: paymentStatusSchema.nullable().optional(),
+  fulfillmentStatus: z.enum(["ORDER_RECEIVED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED", "DELIVERY_FAILED"]).nullable().optional(),
+});
+
+const orderPaymentSummarySchema = z.object({
+  id: z.string().uuid(),
+  provider: z.enum(["SIMULATED", "STRIPE_TEST"]),
+  status: paymentStatusSchema,
+  amount: z.number().nonnegative(),
+  currency: z.string().length(3),
+  reference: z.string(),
+  qrPayload: z.string(),
+  paidAt: z.string().datetime().nullable(),
+});
+
+const fulfillmentSummarySchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(["ORDER_RECEIVED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED", "DELIVERY_FAILED"]),
+  scenario: z.enum(["SUCCESS", "FAILURE"]),
+  startedAt: z.string().datetime(),
+  completedAt: z.string().datetime().nullable(),
+  expectedCompletionAt: z.string().datetime(),
+  timeline: z.array(z.object({
+    status: z.enum(["ORDER_RECEIVED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED", "DELIVERY_FAILED"]),
+    occurredAt: z.string().datetime(),
+  })),
+});
+
+export const orderDetailSchema: z.ZodType<OrderDetailContract> = z.intersection(
+  orderSchema,
+  z.object({
+    currency: z.string().length(3),
+    payment: orderPaymentSummarySchema,
+    fulfillment: fulfillmentSummarySchema.nullable(),
+  }),
+);
+
+export const simulatePaymentResponseSchema: z.ZodType<SimulatePaymentResponse> = z.object({
+  payment: orderPaymentSummarySchema,
+  fulfillment: fulfillmentSummarySchema,
 });
 
 export const orderListSchema: z.ZodType<OrderListContract> = z.object({

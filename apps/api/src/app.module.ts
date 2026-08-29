@@ -20,6 +20,7 @@ import { RecommendationsModule } from './modules/recommendations/recommendations
 import { ReviewSummariesModule } from './modules/review-summaries/review-summaries.module';
 import { MultimodalModule } from './modules/multimodal/multimodal.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { FulfillmentModule } from './modules/fulfillment/fulfillment.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
     ReviewSummariesModule,
     MultimodalModule,
     PaymentsModule,
+    FulfillmentModule,
   ],
 })
 export class AppModule {}

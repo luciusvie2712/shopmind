@@ -12,6 +12,9 @@ import {
   type ReviewSummaryJobData,
   REVIEW_SUMMARY_OPTIONS,
   reviewSummaryJobId,
+  type FulfillmentTransitionJobData,
+  FULFILLMENT_TRANSITION_OPTIONS,
+  fulfillmentTransitionJobId,
 } from './queue.constants';
 
 @Injectable()
@@ -27,6 +30,12 @@ export class QueueService implements OnModuleDestroy {
   private readonly reviewSummary = new Queue<ReviewSummaryJobData>(
     QUEUE_NAMES.reviewSummary,
     { connection: queueConnectionOptions() },
+  );
+  private readonly fulfillment = new Queue<FulfillmentTransitionJobData>(
+    QUEUE_NAMES.fulfillment,
+    {
+      connection: queueConnectionOptions(),
+    },
   );
 
   async enqueueSyncProducts(): Promise<{ readonly jobId: string }> {
@@ -53,17 +62,31 @@ export class QueueService implements OnModuleDestroy {
     });
   }
 
+  async enqueueFulfillmentTransition(
+    data: FulfillmentTransitionJobData,
+    delay: number,
+  ): Promise<void> {
+    await this.fulfillment.add(JOB_NAMES.fulfillmentTransition, data, {
+      ...FULFILLMENT_TRANSITION_OPTIONS,
+      delay,
+      jobId: fulfillmentTransitionJobId(data),
+    });
+  }
+
   async getOperationalSnapshot(): Promise<{
     readonly ingestion: QueueCounts;
     readonly embedding: QueueCounts;
     readonly reviewSummary: QueueCounts;
+    readonly fulfillment: QueueCounts;
   }> {
-    const [ingestion, embedding, reviewSummary] = await Promise.all([
-      this.queueCounts(this.ingestion),
-      this.queueCounts(this.embedding),
-      this.queueCounts(this.reviewSummary),
-    ]);
-    return { ingestion, embedding, reviewSummary };
+    const [ingestion, embedding, reviewSummary, fulfillment] =
+      await Promise.all([
+        this.queueCounts(this.ingestion),
+        this.queueCounts(this.embedding),
+        this.queueCounts(this.reviewSummary),
+        this.queueCounts(this.fulfillment),
+      ]);
+    return { ingestion, embedding, reviewSummary, fulfillment };
   }
 
   private async queueCounts(queue: Queue): Promise<QueueCounts> {
@@ -86,6 +109,7 @@ export class QueueService implements OnModuleDestroy {
       this.ingestion.close(),
       this.embedding.close(),
       this.reviewSummary.close(),
+      this.fulfillment.close(),
     ]);
   }
 }

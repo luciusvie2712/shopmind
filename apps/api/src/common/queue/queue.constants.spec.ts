@@ -2,6 +2,8 @@ import {
   EMBED_PRODUCT_OPTIONS,
   embeddingJobId,
   SYNC_PRODUCTS_OPTIONS,
+  FULFILLMENT_TRANSITION_OPTIONS,
+  fulfillmentTransitionJobId,
 } from './queue.constants';
 
 describe('queue contracts', () => {
@@ -20,5 +22,18 @@ describe('queue contracts', () => {
       attempts: 3,
       backoff: { type: 'exponential' },
     });
+    expect(FULFILLMENT_TRANSITION_OPTIONS).toMatchObject({
+      attempts: 3,
+      backoff: { type: 'exponential' },
+    });
+  });
+
+  it('builds deterministic fulfillment job IDs', () => {
+    expect(
+      fulfillmentTransitionJobId({
+        fulfillmentId: 'fulfillment-id',
+        targetStatus: 'DELIVERED',
+      }),
+    ).toBe('fulfillment:fulfillment-id:DELIVERED');
   });
 });

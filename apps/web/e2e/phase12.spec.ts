@@ -130,6 +130,9 @@ for (const viewport of [
     });
     await product.getByRole("button", { name: "Wishlist" }).click();
     await product.getByTitle("Add to cart").click();
+    await expect(
+      page.locator('[data-sonner-toast][data-removed="false"]'),
+    ).toHaveCount(0, { timeout: 8_000 });
     await page.getByRole("button", { name: "Compare selected" }).click();
     await expect(page.getByRole("table")).toBeVisible();
     await expectNoPageOverflow(page);
@@ -139,8 +142,8 @@ for (const viewport of [
     await expectNoPageOverflow(page);
 
     await page.goto("/cart");
-    await page.getByRole("button", { name: "Create simulated order" }).click();
-    await page.waitForURL("**/orders");
+    await page.getByRole("button", { name: "Đặt mua" }).click();
+    await page.waitForURL("**/orders/*");
     await expect(
       page.getByText("Phase 11 Developer Laptop").filter({ visible: true }),
     ).toBeVisible();

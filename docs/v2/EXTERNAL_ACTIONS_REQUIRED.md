@@ -1,5 +1,17 @@
 # External actions required
 
+## Phase 16.9A production smoke
+
+Reason: Source implementation and local verification can run in this workspace, but the public Vercel/API/worker/PostgreSQL/Redis deployment is external.
+
+Exact user action: Apply migration `20260829130000_phase16_9a_demo_payment_fulfillment`, deploy API/worker/web, configure all six `DEMO_*` values on API and worker, then run both SUCCESS and FAILURE 90-second flows with a refresh during delivery.
+
+Required environment variables: `DEMO_PAYMENT_ENABLED=true`, `DEMO_FULFILLMENT_ENABLED=true`, `DEMO_FULFILLMENT_RECEIVED_TO_TRANSIT_MS=20000`, `DEMO_FULFILLMENT_TRANSIT_TO_OUT_FOR_DELIVERY_MS=35000`, `DEMO_FULFILLMENT_OUT_FOR_DELIVERY_TO_FINAL_MS=35000`, `DEMO_FULFILLMENT_DEFAULT_SCENARIO=SUCCESS`.
+
+Security notes: These are backend runtime settings, not `NEXT_PUBLIC_*` values. No real bank/card/courier credentials are involved.
+
+Status: BLOCKED_EXTERNAL_DEPLOYMENT
+
 ## Production baseline and v2 smoke
 
 Reason: Deployed Vercel/API/worker/database/Redis configuration and public smoke tests are outside the local repository.

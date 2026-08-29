@@ -1,4 +1,7 @@
 import type { OrderContract } from '@shopmind/contracts';
+import type { OrderDetailContract } from '@shopmind/contracts';
+import { toDemoPaymentSummary } from '../payments/demo-payment.mapper';
+import { toFulfillmentSummary } from '../fulfillment/fulfillment.mapper';
 import type { OrderRecord } from './order.repository';
 
 export function toOrderContract(order: OrderRecord): OrderContract {
@@ -17,5 +20,20 @@ export function toOrderContract(order: OrderRecord): OrderContract {
       quantity: item.quantity,
       lineTotal: item.unitPriceSnapshot.mul(item.quantity).toNumber(),
     })),
+    paymentStatus: order.payment?.status ?? null,
+    fulfillmentStatus: order.fulfillment?.status ?? null,
+  };
+}
+
+export function toOrderDetailContract(order: OrderRecord): OrderDetailContract {
+  if (!order.payment || order.payment.provider !== 'SIMULATED')
+    throw new Error('Order does not have a simulated payment');
+  return {
+    ...toOrderContract(order),
+    currency: order.payment.currency.toUpperCase(),
+    payment: toDemoPaymentSummary(order.payment),
+    fulfillment: order.fulfillment
+      ? toFulfillmentSummary(order.fulfillment)
+      : null,
   };
 }
