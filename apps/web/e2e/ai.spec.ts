@@ -289,15 +289,17 @@ test("authenticated assistant renders grounded read-only output", async ({
   };
   let assistantRequests = 0;
   let releaseAssistant: (() => void) | undefined;
-  await page.route("**/api/v1/ai/assistant/messages", async (route) => {
+  await page.route("**/api/v1/ai/assistant/stream", async (route) => {
     assistantRequests += 1;
     await new Promise<void>((resolve) => {
       releaseAssistant = resolve;
     });
     await route.fulfill({
-      status: 201,
-      contentType: "application/json",
-      body: JSON.stringify({
+      status: 200,
+      contentType: "text/event-stream",
+      body: `event: message.done\ndata: ${JSON.stringify({
+        type: "message.done",
+        turn: {
         conversationId: "30000000-0000-4000-8000-000000000001",
         message: {
           id: "30000000-0000-4000-8000-000000000002",
@@ -307,7 +309,8 @@ test("authenticated assistant renders grounded read-only output", async ({
         },
         products: [developerLaptop, second],
         requestId: "phase11-assistant",
-      }),
+        },
+      })}\n\n`,
     });
   });
 
@@ -348,20 +351,22 @@ test("assistant preserves the conversation through timeout and manual retry", as
 }) => {
   await registerAndLogin(page, "assistant-retry");
   let assistantRequests = 0;
-  await page.route("**/api/v1/ai/assistant/messages", async (route) => {
+  await page.route("**/api/v1/ai/assistant/stream", async (route) => {
     assistantRequests += 1;
     if (assistantRequests === 1) {
       await route.fulfill({
-        status: 504,
-        contentType: "application/json",
-        body: JSON.stringify(apiError("AI_PROVIDER_TIMEOUT", "Timed out")),
+        status: 200,
+        contentType: "text/event-stream",
+        body: `event: error\ndata: ${JSON.stringify({ type: "error", code: "AI_PROVIDER_TIMEOUT", message: "Timed out" })}\n\n`,
       });
       return;
     }
     await route.fulfill({
-      status: 201,
-      contentType: "application/json",
-      body: JSON.stringify({
+      status: 200,
+      contentType: "text/event-stream",
+      body: `event: message.done\ndata: ${JSON.stringify({
+        type: "message.done",
+        turn: {
         conversationId: "30000000-0000-4000-8000-000000000011",
         message: {
           id: "30000000-0000-4000-8000-000000000012",
@@ -371,7 +376,8 @@ test("assistant preserves the conversation through timeout and manual retry", as
         },
         products: [],
         requestId: "phase11-assistant-retry",
-      }),
+        },
+      })}\n\n`,
     });
   });
 

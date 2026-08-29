@@ -34,7 +34,15 @@ async function waitForUrl(url, child) {
     }
     try {
       const response = await fetch(url);
-      if (response.ok) return;
+      if (response.ok) {
+        // A stale process can briefly answer on the same port while this child
+        // is still failing with EADDRINUSE. Confirm the spawned server survives.
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        if (child.exitCode !== null) {
+          throw new Error(`Test server exited during readiness: ${url}`);
+        }
+        return;
+      }
     } catch {
       // Readiness polling continues until the bounded deadline.
     }
