@@ -1,6 +1,6 @@
 # ShopMind v2 implementation status
 
-Last updated: 2026-08-29
+Last updated: 2026-08-30
 
 | Phase | Task | Status | Files / migrations | Tests | Decisions / blockers |
 |---|---|---|---|---|---|
@@ -15,8 +15,8 @@ Last updated: 2026-08-29
 | 16.7 | Multimodal | IN_PROGRESS | transient image-upload endpoint/UI; Gemini multimodal query embedding; parameterized vector search | file-validation unit tests; typecheck/build | Product-image async embedding/indexing and relevance evaluation remain incomplete; live model/quota smoke needs credentials. |
 | 16.8 | Commerce source | BLOCKED_EXTERNAL | source-provider contract and DummyJSON adapter | adapter contract unit test and ingestion regression suites | Repository boundary is complete; no real provider can be implemented without provider selection, API contract and credentials. |
 | 16.9 | Stripe test mode | BLOCKED_EXTERNAL | payment/webhook migration; server-authoritative intent/webhook flow; Payment Element UI | signature unit tests; migration/typecheck/build/regression gates | Stripe test keys and public webhook registration are required for an end-to-end payment transition test. |
-| 16.9A | Demo payment & fulfillment simulation | PASS | `20260829130000_phase16_9a_demo_payment_fulfillment`; payment/fulfillment API, BullMQ worker, `/orders/[id]` | 183 unit, 52 integration, 40 browser tests; realtime 20/55/90-second smoke | Extends the existing Payment boundary with a production-enabled simulated provider; PostgreSQL is canonical, confirmation is idempotent and the worker reconciles persisted active flows after restart. Production deployment smoke remains external. |
-| 16.10 | Final QA / release | BLOCKED_EXTERNAL | Windows E2E runner fixes and v2 documentation | local lint/typecheck/unit/integration/build gates pass; full browser suite 39/39 passes | Production smoke and the blocked provider/payment gates prevent a v2 release PASS decision. |
+| 16.9A | Demo payment & fulfillment simulation | PASS | `20260829130000_phase16_9a_demo_payment_fulfillment`; payment/fulfillment API, BullMQ worker, `/orders/[id]` | 185 unit, 52 integration, 40 browser tests; realtime 20/55/90-second smoke | Extends the existing Payment boundary with a production-enabled simulated provider; PostgreSQL is canonical, confirmation is idempotent and the worker reconciles persisted active flows after restart. Production deployment smoke remains external. |
+| 16.10 | Final QA / release | BLOCKED_EXTERNAL | Clean-checkout type generation; hardened CI; gated GHCR/Northflank/Vercel CD; deployment runbook | local lint/typecheck/unit/integration/build/image gates pass; workflows pass actionlint; latest browser suite 40/40 passes | Production environment activation/smoke and the blocked provider/payment gates prevent a v2 release PASS decision. |
 
 ## Baseline evidence
 
@@ -29,11 +29,24 @@ Last updated: 2026-08-29
 
 - `pnpm lint`: PASS.
 - `pnpm typecheck`: PASS.
-- `pnpm test`: PASS, 51 suites / 183 tests.
+- `pnpm test`: PASS, 52 suites / 185 tests.
 - `pnpm test:integration` with PostgreSQL `localhost:5433` and isolated Redis DB 15: PASS, 10 suites / 52 tests (one explicit realtime smoke is skipped in the normal suite).
 - `pnpm build`: PASS for contracts, API and web.
 - Browser E2E: PASS, 40/40 Playwright tests, including checkout navigation, canonical demo QR, payment confirmation and persisted order status.
 - Realtime fulfillment smoke with `RUN_DEMO_FULFILLMENT_90S_SMOKE=true`: PASS for SUCCESS and FAILURE at configured 20/55/90-second offsets, including a worker restart and reconciliation mid-flow.
+- CI/CD validation: PASS for actionlint v1.7.12, Prisma validation/generation, clean Next.js route type generation, and the production backend Docker image build.
+
+## Phase 16.10 — CI/CD and deployment readiness
+
+| Area | Status | Evidence / remaining work |
+|---|---|---|
+| Clean-checkout CI | PASS | Web typecheck runs `next typegen` before `tsc`; the missing static-image declarations that failed GitHub run `33264608155` no longer depend on ignored local files. |
+| CI actions | PASS | Official current action majors are used; Prisma schema validation/client generation are explicit before lint/typecheck/test/build gates. |
+| Release gate | PASS | CD is triggered only by a successful same-repository `push` CI run on `main`, or by protected manual dispatch; PR/fork workflow runs cannot deploy. |
+| Backend artifact | PASS | One API/worker runtime image is published to GHCR with mutable `main` and immutable commit-SHA tags, provenance and SBOM. |
+| Migration/deploy ordering | PASS | Forward Prisma migrations run from the released image before Northflank API/worker and Vercel deploy hooks are invoked. |
+| Production verification | IN_PROGRESS | Workflow validates required configuration and polls public API/web health; full production behavior smoke remains external. |
+| Provider configuration | BLOCKED_EXTERNAL | GitHub production environment, managed PostgreSQL/Redis, Northflank services, Vercel project, hooks, domains and runtime secrets require operator access. |
 
 ## Phase 16.9A — Demo Payment & Fulfillment Simulation
 

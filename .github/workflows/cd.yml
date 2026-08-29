@@ -1,0 +1,160 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+  packages: write
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy-production:
+    if: >-
+      vars.ENABLE_PRODUCTION_DEPLOY == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.head_branch == 'main'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_WEB_URL }}
+    env:
+      RELEASE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      BACKEND_IMAGE: ghcr.io/${{ github.repository }}-api
+
+    steps:
+      - name: Check out the released revision
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.RELEASE_SHA }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Sign in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish the backend image
+        id: backend-image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          target: runtime
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:main
+            ${{ env.BACKEND_IMAGE }}:${{ env.RELEASE_SHA }}
+          labels: |
+            org.opencontainers.image.revision=${{ env.RELEASE_SHA }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
+
+      - name: Validate production deployment configuration
+        env:
+          PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          NORTHFLANK_API_DEPLOY_HOOK_URL: ${{ secrets.NORTHFLANK_API_DEPLOY_HOOK_URL }}
+          NORTHFLANK_WORKER_DEPLOY_HOOK_URL: ${{ secrets.NORTHFLANK_WORKER_DEPLOY_HOOK_URL }}
+          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+          PRODUCTION_API_HEALTH_URL: ${{ vars.PRODUCTION_API_HEALTH_URL }}
+          PRODUCTION_WEB_URL: ${{ vars.PRODUCTION_WEB_URL }}
+        run: |
+          set -euo pipefail
+          for variable_name in \
+            PRODUCTION_DATABASE_URL \
+            NORTHFLANK_API_DEPLOY_HOOK_URL \
+            NORTHFLANK_WORKER_DEPLOY_HOOK_URL \
+            VERCEL_DEPLOY_HOOK_URL \
+            PRODUCTION_API_HEALTH_URL \
+            PRODUCTION_WEB_URL
+          do
+            if [ -z "${!variable_name:-}" ]; then
+              echo "::error::Missing production configuration: ${variable_name}"
+              exit 1
+            fi
+          done
+
+      - name: Apply forward-only production migrations
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          docker run --rm \
+            --env DATABASE_URL \
+            "${BACKEND_IMAGE}@${{ steps.backend-image.outputs.digest }}" \
+            pnpm --filter api prisma:migrate:deploy
+
+      - name: Trigger Northflank API deployment
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets.NORTHFLANK_API_DEPLOY_HOOK_URL }}
+        run: curl --fail-with-body --silent --show-error --retry 3 --request POST "${DEPLOY_HOOK_URL}"
+
+      - name: Trigger Northflank worker deployment
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets.NORTHFLANK_WORKER_DEPLOY_HOOK_URL }}
+        run: curl --fail-with-body --silent --show-error --retry 3 --request POST "${DEPLOY_HOOK_URL}"
+
+      - name: Trigger Vercel web deployment
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: curl --fail-with-body --silent --show-error --retry 3 --request POST "${DEPLOY_HOOK_URL}"
+
+      - name: Verify production health
+        env:
+          API_HEALTH_URL: ${{ vars.PRODUCTION_API_HEALTH_URL }}
+          WEB_URL: ${{ vars.PRODUCTION_WEB_URL }}
+        run: |
+          set -euo pipefail
+          sleep 20
+          for service_url in "${API_HEALTH_URL}" "${WEB_URL}"
+          do
+            healthy=false
+            for attempt in $(seq 1 30)
+            do
+              if curl --fail --silent --show-error \
+                --connect-timeout 5 \
+                --max-time 15 \
+                "${service_url}" > /dev/null
+              then
+                healthy=true
+                break
+              fi
+              sleep 10
+            done
+            if [ "${healthy}" != "true" ]; then
+              echo "::error::Production health check failed: ${service_url}"
+              exit 1
+            fi
+          done
+
+      - name: Publish deployment summary
+        env:
+          API_HEALTH_URL: ${{ vars.PRODUCTION_API_HEALTH_URL }}
+          WEB_URL: ${{ vars.PRODUCTION_WEB_URL }}
+        run: |
+          {
+            echo "## Production deployment"
+            echo "- Revision: \`${RELEASE_SHA}\`"
+            echo "- Backend image: \`${BACKEND_IMAGE}@${{ steps.backend-image.outputs.digest }}\`"
+            echo "- API health: ${API_HEALTH_URL}"
+            echo "- Web: ${WEB_URL}"
+          } >> "${GITHUB_STEP_SUMMARY}"

@@ -9,9 +9,9 @@ The LLM does not own product truth. Product titles, prices, ratings, stock, and
 availability shown to users are mapped from canonical backend data in
 PostgreSQL.
 
-> Deployment status: the production container foundation is available, but no
-> public hosting platform, managed database/cache, domain, or public demo URL
-> is configured yet.
+> Deployment status: CI and a gated Vercel/Northflank production pipeline are
+> available. Managed database/cache, provider hooks, domains and the public
+> demo URL still require operator configuration.
 
 ## Contents
 
@@ -327,9 +327,10 @@ it does not call Gemini.
 
 ## Deployment
 
-Production deployment is pending: there is no selected hosting provider,
-managed PostgreSQL/Redis service, domain, or public URL in this repository.
-Do not treat localhost addresses as a live demo.
+The repository now defines a gated production pipeline for the documented
+Vercel + Northflank topology. Managed PostgreSQL/pgvector, managed Redis,
+domains and production credentials still have to be provisioned by the
+operator; localhost addresses are not a live demo.
 
 The platform-neutral backend image is built from the repository root:
 
@@ -347,9 +348,15 @@ Worker:  node apps/api/dist/worker.js
 The intended production topology requires managed PostgreSQL with pgvector,
 managed Redis/Valkey, runtime-injected secrets, a separate API and worker
 service, and a web/API origin strategy compatible with the Secure HttpOnly
-`SameSite=Lax` refresh cookie. CI builds the production backend image, but no
-provider-specific deploy job is configured. Deployment must remain gated on a
-successful `main` CI run.
+`SameSite=Lax` refresh cookie. CI validates clean-checkout Prisma/Next.js types,
+all quality gates and production builds. After a successful `main` CI run, the
+gated CD workflow publishes the backend image to GHCR, applies migrations,
+triggers Northflank API/worker and Vercel deployments, and checks public health.
+
+CD remains disabled until `ENABLE_PRODUCTION_DEPLOY=true` and the protected
+GitHub `production` environment is configured. See
+[`docs/v2/DEPLOYMENT_RUNBOOK.md`](docs/v2/DEPLOYMENT_RUNBOOK.md) for required
+secrets, provider setup, first release, smoke tests and rollback.
 
 ## 1-2 minute demo script
 

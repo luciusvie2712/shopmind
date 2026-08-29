@@ -1,5 +1,28 @@
 # External actions required
 
+## Production CI/CD activation
+
+Reason: The repository contains CI plus a gated Vercel/Northflank CD workflow,
+but GitHub environment secrets, managed services, deploy hooks, domains and
+provider access cannot be created from source control.
+
+Exact user action: Follow `docs/v2/DEPLOYMENT_RUNBOOK.md`, create the protected
+GitHub `production` environment, configure Northflank API/worker and Vercel,
+then set `ENABLE_PRODUCTION_DEPLOY=true` and run the `CD` workflow once.
+
+Required GitHub secrets: `PRODUCTION_DATABASE_URL`,
+`NORTHFLANK_API_DEPLOY_HOOK_URL`, `NORTHFLANK_WORKER_DEPLOY_HOOK_URL`, and
+`VERCEL_DEPLOY_HOOK_URL`.
+
+Required GitHub variables: `ENABLE_PRODUCTION_DEPLOY`,
+`PRODUCTION_API_HEALTH_URL`, and `PRODUCTION_WEB_URL`.
+
+Security notes: Deploy-hook URLs are credentials. Store them only as protected
+environment secrets, require a production reviewer where appropriate, and
+rotate any hook that appears in logs or documentation.
+
+Status: BLOCKED_EXTERNAL_DEPLOYMENT_CONFIGURATION
+
 ## Phase 16.9A production smoke
 
 Reason: Source implementation and local verification can run in this workspace, but the public Vercel/API/worker/PostgreSQL/Redis deployment is external.
