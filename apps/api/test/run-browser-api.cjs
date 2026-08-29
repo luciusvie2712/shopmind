@@ -15,7 +15,7 @@ async function main() {
     API_PORT: '4011',
     WEB_ORIGIN: 'http://localhost:3011',
   });
-  require('../dist/src/main.js');
+  require('../dist/main.js');
 }
 
 main().catch((error) => {

@@ -8,12 +8,16 @@ import { EmbedProductProcessor } from './embed-product.processor';
 import { ProductEmbeddingRepository } from './product-embedding.repository';
 import { ProductImportRepository } from './product-import.repository';
 import { SyncProductsProcessor } from './sync-products.processor';
+import { DummyJsonSourceProvider } from './dummy-json-source.provider';
+import { PRODUCT_SOURCE_PROVIDER } from './product-source.provider';
 
 @Module({
   imports: [EmbeddingModule, AuthModule],
   controllers: [IngestionController],
   providers: [
     DummyJsonClient,
+    DummyJsonSourceProvider,
+    { provide: PRODUCT_SOURCE_PROVIDER, useExisting: DummyJsonSourceProvider },
     EmbedProductProcessor,
     IngestionService,
     ProductEmbeddingRepository,

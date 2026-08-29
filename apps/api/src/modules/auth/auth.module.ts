@@ -4,6 +4,7 @@ import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AccessTokenGuard } from './guards/access-token.guard';
+import { OptionalAccessTokenGuard } from './guards/optional-access-token.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { RefreshSessionRepository } from './repositories/refresh-session.repository';
 import { AccessTokenService } from './services/access-token.service';
@@ -16,12 +17,18 @@ import { RefreshSessionService } from './services/refresh-session.service';
   providers: [
     AuthService,
     AccessTokenGuard,
+    OptionalAccessTokenGuard,
     RolesGuard,
     RefreshSessionRepository,
     AccessTokenService,
     PasswordHasherService,
     RefreshSessionService,
   ],
-  exports: [AccessTokenGuard, RolesGuard, AccessTokenService],
+  exports: [
+    AccessTokenGuard,
+    OptionalAccessTokenGuard,
+    RolesGuard,
+    AccessTokenService,
+  ],
 })
 export class AuthModule {}

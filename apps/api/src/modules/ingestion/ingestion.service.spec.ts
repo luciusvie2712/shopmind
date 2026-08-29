@@ -18,13 +18,11 @@ describe('IngestionService catalog bootstrap', () => {
     };
     const service = new IngestionService(
       {
-        fetchProducts: jest.fn().mockResolvedValue({
+        fetchPage: jest.fn().mockResolvedValue({
           products: [],
-          total: 0,
-          skip: 0,
-          limit: 0,
+          complete: true,
         }),
-      } as never,
+      },
       productImportRepository as never,
       { invalidateCatalog: jest.fn() } as never,
       { enqueueEmbedProduct: jest.fn() } as never,

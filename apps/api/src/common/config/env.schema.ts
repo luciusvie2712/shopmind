@@ -44,6 +44,7 @@ const environmentSchema = z
       .string()
       .url('must be a valid URL')
       .default('https://dummyjson.com'),
+    PRODUCT_SOURCE_PROVIDER: z.enum(['dummyjson']).default('dummyjson'),
     GEMINI_API_KEY: nonEmptyString.optional(),
     GEMINI_MODEL: nonEmptyString.default('gemini-3.1-flash-lite'),
     GEMINI_EMBEDDING_MODEL: nonEmptyString.default('gemini-embedding-2'),
@@ -52,6 +53,19 @@ const environmentSchema = z
       .default(768),
     AI_TIMEOUT_MS: positiveInteger.default(8000),
     AI_MAX_TOOL_STEPS: positiveInteger.default(4),
+    AI_FALLBACK_PROVIDER: z.enum(['none']).default('none'),
+    AI_FALLBACK_TOTAL_TIMEOUT_MS: positiveInteger.default(12_000),
+    MULTIMODAL_MAX_UPLOAD_BYTES: positiveInteger.default(5_242_880),
+    STRIPE_TEST_MODE_ENABLED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
+    STRIPE_SECRET_KEY: nonEmptyString.optional(),
+    STRIPE_WEBHOOK_SECRET: nonEmptyString.optional(),
+    STRIPE_CURRENCY: z
+      .string()
+      .regex(/^[a-z]{3}$/)
+      .default('usd'),
     API_PORT: positiveInteger
       .refine((value) => value <= 65_535, 'must be at most 65535')
       .default(4000),
@@ -64,6 +78,22 @@ const environmentSchema = z
       .default('development'),
   })
   .superRefine((environment, context) => {
+    if (environment.STRIPE_TEST_MODE_ENABLED) {
+      if (!environment.STRIPE_SECRET_KEY?.startsWith('sk_test_')) {
+        context.addIssue({
+          code: 'custom',
+          message: 'must be a Stripe test secret key',
+          path: ['STRIPE_SECRET_KEY'],
+        });
+      }
+      if (!environment.STRIPE_WEBHOOK_SECRET?.startsWith('whsec_')) {
+        context.addIssue({
+          code: 'custom',
+          message: 'must be a Stripe webhook secret',
+          path: ['STRIPE_WEBHOOK_SECRET'],
+        });
+      }
+    }
     if (environment.NODE_ENV !== 'production') {
       return;
     }
@@ -110,6 +140,7 @@ export interface AppConfig {
   readonly dummyJson: {
     readonly baseUrl: string;
   };
+  readonly productSourceProvider: 'dummyjson';
   readonly gemini: {
     readonly apiKey: string | undefined;
     readonly model: string;
@@ -119,9 +150,18 @@ export interface AppConfig {
   readonly ai: {
     readonly timeoutMs: number;
     readonly maxToolSteps: number;
+    readonly fallbackProvider: 'none';
+    readonly fallbackTotalTimeoutMs: number;
+    readonly multimodalMaxUploadBytes: number;
   };
   readonly apiPort: number;
   readonly webOrigin: string;
+  readonly stripe: {
+    readonly enabled: boolean;
+    readonly secretKey?: string;
+    readonly webhookSecret?: string;
+    readonly currency: string;
+  };
 }
 
 export function parseEnvironment(environment: NodeJS.ProcessEnv): AppConfig {
@@ -152,6 +192,7 @@ export function parseEnvironment(environment: NodeJS.ProcessEnv): AppConfig {
     dummyJson: {
       baseUrl: values.DUMMYJSON_BASE_URL,
     },
+    productSourceProvider: values.PRODUCT_SOURCE_PROVIDER,
     gemini: {
       apiKey: values.GEMINI_API_KEY,
       model: values.GEMINI_MODEL,
@@ -161,6 +202,19 @@ export function parseEnvironment(environment: NodeJS.ProcessEnv): AppConfig {
     ai: {
       timeoutMs: values.AI_TIMEOUT_MS,
       maxToolSteps: values.AI_MAX_TOOL_STEPS,
+      fallbackProvider: values.AI_FALLBACK_PROVIDER,
+      fallbackTotalTimeoutMs: values.AI_FALLBACK_TOTAL_TIMEOUT_MS,
+      multimodalMaxUploadBytes: values.MULTIMODAL_MAX_UPLOAD_BYTES,
+    },
+    stripe: {
+      enabled: values.STRIPE_TEST_MODE_ENABLED,
+      ...(values.STRIPE_SECRET_KEY === undefined
+        ? {}
+        : { secretKey: values.STRIPE_SECRET_KEY }),
+      ...(values.STRIPE_WEBHOOK_SECRET === undefined
+        ? {}
+        : { webhookSecret: values.STRIPE_WEBHOOK_SECRET }),
+      currency: values.STRIPE_CURRENCY,
     },
     apiPort: values.API_PORT,
     webOrigin: values.WEB_ORIGIN,

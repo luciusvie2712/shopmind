@@ -30,12 +30,14 @@ import { type RankedSearchCandidate, rankSearchCandidates } from './ranking';
 import { toProductSearchCriteria } from './search-query';
 import { SearchRepository } from './search.repository';
 import { VectorSearchRepository } from './vector-search.repository';
+import { EventsRepository } from '../events/events.repository';
 
 @Injectable()
 export class SearchService {
   constructor(
     private readonly searchRepository: SearchRepository,
     private readonly vectorSearchRepository: VectorSearchRepository,
+    private readonly eventsRepository: EventsRepository,
     @Inject(EMBEDDING_PROVIDER)
     private readonly embeddingProvider: EmbeddingProvider,
   ) {}
@@ -117,8 +119,9 @@ export class SearchService {
         input.negativePreferences,
       );
 
+      const behaviorSignals = await this.feedbackSignals(eligibleCandidates);
       return boundHybridCandidates(
-        rankSearchCandidates(eligibleCandidates),
+        rankSearchCandidates(eligibleCandidates, behaviorSignals),
         criteria.limit,
       );
     } catch (error) {
@@ -160,14 +163,26 @@ export class SearchService {
       input.preferenceTerms,
       input.negativePreferences,
     );
+    const behaviorSignals = await this.feedbackSignals(candidates);
     return boundHybridCandidates(
-      rankSearchCandidates(candidates),
+      rankSearchCandidates(candidates, behaviorSignals),
       criteria.limit,
     );
   }
 
   private embedQuery(query: string): Promise<number[]> {
     return this.embeddingProvider.embedText(query);
+  }
+
+  private async feedbackSignals(
+    candidates: readonly { readonly product: { readonly id: string } }[],
+  ): Promise<ReadonlyMap<string, number>> {
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1_000);
+    const signals = await this.eventsRepository.behaviorSignals(
+      candidates.map(({ product }) => product.id),
+      since,
+    );
+    return new Map(signals.map(({ productId, score }) => [productId, score]));
   }
 
   private toEmbeddingApiError(error: unknown): unknown {

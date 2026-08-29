@@ -17,6 +17,10 @@ import { EmbeddingModule } from './embedding/embedding.module';
 import { ProductComparisonFactsService } from './product-comparison-facts.service';
 import { AI_SEARCH_PROVIDER } from './provider/ai-provider';
 import { GeminiAiProvider } from './provider/gemini-ai.provider';
+import {
+  FallbackAiProvider,
+  PRIMARY_AI_PROVIDER,
+} from './provider/fallback-ai.provider';
 import { AiToolRegistry } from './tools/tool-registry';
 import { CompareProductsTool } from './tools/compare-products.tool';
 import { GetCategoriesTool } from './tools/get-categories.tool';
@@ -24,6 +28,7 @@ import { GetProductTool } from './tools/get-product.tool';
 import { GetUserPreferencesTool } from './tools/get-user-preferences.tool';
 import { GetWishlistTool } from './tools/get-wishlist.tool';
 import { SearchProductsTool } from './tools/search-products.tool';
+import { AssistantStreamService } from './assistant-stream.service';
 
 @Module({
   imports: [
@@ -41,6 +46,7 @@ import { SearchProductsTool } from './tools/search-products.tool';
     AiRequestLogService,
     AiSearchService,
     AssistantService,
+    AssistantStreamService,
     CompareService,
     ConversationRepository,
     ConversationService,
@@ -53,7 +59,9 @@ import { SearchProductsTool } from './tools/search-products.tool';
     GetWishlistTool,
     AiToolRegistry,
     GeminiAiProvider,
-    { provide: AI_SEARCH_PROVIDER, useExisting: GeminiAiProvider },
+    FallbackAiProvider,
+    { provide: PRIMARY_AI_PROVIDER, useExisting: GeminiAiProvider },
+    { provide: AI_SEARCH_PROVIDER, useExisting: FallbackAiProvider },
   ],
   exports: [AI_SEARCH_PROVIDER],
 })

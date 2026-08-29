@@ -17,7 +17,7 @@ export interface NormalizedProductReview {
 }
 
 export interface NormalizedProduct {
-  readonly source: typeof DUMMYJSON_SOURCE;
+  readonly source: string;
   readonly externalId: string;
   readonly category: { readonly slug: string; readonly name: string };
   readonly title: string;

@@ -9,6 +9,9 @@ import {
   QUEUE_NAMES,
   SYNC_PRODUCTS_OPTIONS,
   type SyncProductsJobData,
+  type ReviewSummaryJobData,
+  REVIEW_SUMMARY_OPTIONS,
+  reviewSummaryJobId,
 } from './queue.constants';
 
 @Injectable()
@@ -19,6 +22,10 @@ export class QueueService implements OnModuleDestroy {
   );
   private readonly embedding = new Queue<EmbedProductJobData>(
     QUEUE_NAMES.embedding,
+    { connection: queueConnectionOptions() },
+  );
+  private readonly reviewSummary = new Queue<ReviewSummaryJobData>(
+    QUEUE_NAMES.reviewSummary,
     { connection: queueConnectionOptions() },
   );
 
@@ -39,7 +46,53 @@ export class QueueService implements OnModuleDestroy {
     });
   }
 
-  async onModuleDestroy(): Promise<void> {
-    await Promise.all([this.ingestion.close(), this.embedding.close()]);
+  async enqueueReviewSummary(data: ReviewSummaryJobData): Promise<void> {
+    await this.reviewSummary.add(JOB_NAMES.summarizeReviews, data, {
+      ...REVIEW_SUMMARY_OPTIONS,
+      jobId: reviewSummaryJobId(data),
+    });
   }
+
+  async getOperationalSnapshot(): Promise<{
+    readonly ingestion: QueueCounts;
+    readonly embedding: QueueCounts;
+    readonly reviewSummary: QueueCounts;
+  }> {
+    const [ingestion, embedding, reviewSummary] = await Promise.all([
+      this.queueCounts(this.ingestion),
+      this.queueCounts(this.embedding),
+      this.queueCounts(this.reviewSummary),
+    ]);
+    return { ingestion, embedding, reviewSummary };
+  }
+
+  private async queueCounts(queue: Queue): Promise<QueueCounts> {
+    const counts = await queue.getJobCounts(
+      'waiting',
+      'active',
+      'completed',
+      'failed',
+    );
+    return {
+      waiting: counts.waiting ?? 0,
+      active: counts.active ?? 0,
+      completed: counts.completed ?? 0,
+      failed: counts.failed ?? 0,
+    };
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await Promise.all([
+      this.ingestion.close(),
+      this.embedding.close(),
+      this.reviewSummary.close(),
+    ]);
+  }
+}
+
+export interface QueueCounts {
+  readonly waiting: number;
+  readonly active: number;
+  readonly completed: number;
+  readonly failed: number;
 }

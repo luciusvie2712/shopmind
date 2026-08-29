@@ -102,6 +102,41 @@ export class GeminiClient {
     }
   }
 
+  async embedImage(
+    data: Buffer,
+    mimeType: 'image/jpeg' | 'image/png',
+  ): Promise<unknown> {
+    if (this.client === undefined)
+      throw new EmbeddingProviderUnavailableError();
+    const abortController = new AbortController();
+    const timeout = setTimeout(
+      () => abortController.abort(),
+      config.ai.timeoutMs,
+    );
+    try {
+      const response = await this.client.models.embedContent({
+        model: config.gemini.embeddingModel,
+        contents: [{ inlineData: { mimeType, data: data.toString('base64') } }],
+        config: {
+          abortSignal: abortController.signal,
+          outputDimensionality: config.gemini.embeddingDimension,
+        },
+      });
+      return response.embeddings?.[0]?.values;
+    } catch (error) {
+      if (abortController.signal.aborted)
+        throw new EmbeddingProviderTimeoutError();
+      if (
+        error instanceof EmbeddingProviderTimeoutError ||
+        error instanceof EmbeddingProviderUnavailableError
+      )
+        throw error;
+      throw new EmbeddingProviderUnavailableError();
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   async generateStructured(
     request: GeminiStructuredRequest,
   ): Promise<GeminiStructuredResponse> {

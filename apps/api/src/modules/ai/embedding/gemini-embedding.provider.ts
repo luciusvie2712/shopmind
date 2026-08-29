@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { config } from '../../../common/config';
 import {
   type EmbeddingProvider,
+  type MultimodalEmbeddingProvider,
   validateEmbeddingVector,
 } from './embedding-provider';
 import { GeminiClient } from '../gemini.client';
@@ -26,7 +27,9 @@ export function embeddingProviderLogFields(
 }
 
 @Injectable()
-export class GeminiEmbeddingProvider implements EmbeddingProvider {
+export class GeminiEmbeddingProvider
+  implements EmbeddingProvider, MultimodalEmbeddingProvider
+{
   private readonly logger = new Logger(GeminiEmbeddingProvider.name);
 
   constructor(private readonly client: GeminiClient) {}
@@ -35,6 +38,25 @@ export class GeminiEmbeddingProvider implements EmbeddingProvider {
     const startedAt = process.hrtime.bigint();
     try {
       const vector = await this.client.embedText(text);
+      const validated = validateEmbeddingVector(
+        vector,
+        config.gemini.embeddingDimension,
+      );
+      this.log('success', startedAt);
+      return validated;
+    } catch (error) {
+      this.log('failure', startedAt, error);
+      throw error;
+    }
+  }
+
+  async embedImage(
+    data: Buffer,
+    mimeType: 'image/jpeg' | 'image/png',
+  ): Promise<number[]> {
+    const startedAt = process.hrtime.bigint();
+    try {
+      const vector = await this.client.embedImage(data, mimeType);
       const validated = validateEmbeddingVector(
         vector,
         config.gemini.embeddingDimension,

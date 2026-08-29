@@ -7,11 +7,13 @@ import {
   JOB_NAMES,
   QUEUE_NAMES,
   type SyncProductsJobData,
+  type ReviewSummaryJobData,
 } from './common/queue/queue.constants';
 import { EmbedProductProcessor } from './modules/ingestion/embed-product.processor';
 import { SyncProductsProcessor } from './modules/ingestion/sync-products.processor';
 import { StructuredLogger } from './common/logging/structured-logger';
 import { registerWorkerObservability } from './common/queue/worker-observability';
+import { ReviewSummaryProcessor } from './modules/review-summaries/review-summary.processor';
 
 async function bootstrap(): Promise<void> {
   const logger = new StructuredLogger();
@@ -20,6 +22,7 @@ async function bootstrap(): Promise<void> {
   });
   const syncProducts = application.get(SyncProductsProcessor);
   const embedProduct = application.get(EmbedProductProcessor);
+  const reviewSummary = application.get(ReviewSummaryProcessor);
   const ingestionWorker = new Worker<SyncProductsJobData>(
     QUEUE_NAMES.ingestion,
     async (job) => {
@@ -40,7 +43,16 @@ async function bootstrap(): Promise<void> {
     },
     { connection: queueConnectionOptions(), concurrency: 2 },
   );
-  const workers = [ingestionWorker, embeddingWorker];
+  const reviewSummaryWorker = new Worker<ReviewSummaryJobData>(
+    QUEUE_NAMES.reviewSummary,
+    async (job) => {
+      if (job.name !== JOB_NAMES.summarizeReviews)
+        throw new Error(`Unsupported review summary job: ${job.name}`);
+      await reviewSummary.process(job);
+    },
+    { connection: queueConnectionOptions(), concurrency: 2 },
+  );
+  const workers = [ingestionWorker, embeddingWorker, reviewSummaryWorker];
   workers.forEach((worker) => registerWorkerObservability(worker, logger));
 
   let isClosing = false;

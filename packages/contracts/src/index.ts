@@ -118,11 +118,10 @@ export interface AiSearchRequest {
   readonly limit?: number;
 }
 
-export type AiSearchStatus = 'success' | 'no_hard_match' | 'fallback';
-export type AiSearchFallbackStage = 'intent' | 'retrieval' | 'recommendation';
+export type AiSearchStatus = "success" | "no_hard_match" | "fallback";
+export type AiSearchFallbackStage = "intent" | "retrieval" | "recommendation";
 export type AiSearchFallbackReason =
-  | 'AI_INVALID_OUTPUT'
-  | 'AI_PROVIDER_TIMEOUT';
+  "AI_INVALID_OUTPUT" | "AI_PROVIDER_TIMEOUT";
 
 export interface AiSearchResultContract {
   readonly product: ProductSummaryContract;
@@ -241,4 +240,257 @@ export interface OrderContract {
 
 export interface OrderListContract {
   readonly items: readonly OrderContract[];
+}
+
+export type AssistantStreamEventContract =
+  | { readonly type: "message.start"; readonly requestId: string }
+  | { readonly type: "message.delta"; readonly delta: string }
+  | { readonly type: "message.done"; readonly turn: AssistantTurnContract }
+  | {
+      readonly type: "error";
+      readonly code: ApiErrorCode;
+      readonly message: string;
+    }
+  | { readonly type: "heartbeat" };
+
+export type UserEventTypeContract =
+  | "PRODUCT_VIEW"
+  | "SEARCH_RESULT_CLICK"
+  | "ADD_TO_CART"
+  | "RECOMMENDATION_IMPRESSION"
+  | "RECOMMENDATION_CLICK";
+
+export interface UserEventMetadataContract {
+  readonly surface?: string;
+  readonly position?: number;
+  readonly queryHash?: string;
+}
+
+export interface CreateUserEventRequest {
+  readonly eventId: string;
+  readonly type: UserEventTypeContract;
+  readonly productId?: string;
+  readonly correlationId?: string;
+  readonly metadata?: UserEventMetadataContract;
+}
+
+export interface CreateUserEventContract {
+  readonly eventId: string;
+  readonly status: "recorded" | "duplicate";
+}
+
+export interface AdminMetricCountContract {
+  readonly total: number;
+}
+
+export interface AdminQueueMetricsContract {
+  readonly waiting: number;
+  readonly active: number;
+  readonly completed: number;
+  readonly failed: number;
+}
+
+export interface AdminAnalyticsOverviewContract {
+  readonly range: { readonly from: string; readonly to: string };
+  readonly catalog: {
+    readonly products: number;
+    readonly activeProducts: number;
+    readonly sourceMissingProducts: number;
+    readonly categories: number;
+    readonly embeddingCoverage: number;
+    readonly staleEmbeddings: number;
+  };
+  readonly ai: {
+    readonly requests: number;
+    readonly successes: number;
+    readonly failures: number;
+    readonly averageLatencyMs: number;
+    readonly p95LatencyMs: number;
+    readonly inputTokens: number;
+    readonly outputTokens: number;
+  };
+  readonly events: {
+    readonly productViews: number;
+    readonly searchClicks: number;
+    readonly cartAdditions: number;
+    readonly topProducts: readonly {
+      readonly product: ProductSummaryContract;
+      readonly events: number;
+    }[];
+  };
+  readonly commerce: {
+    readonly orders: number;
+    readonly orderValue: number;
+  };
+  readonly jobs: {
+    readonly available: boolean;
+    readonly ingestion?: AdminQueueMetricsContract;
+    readonly embedding?: AdminQueueMetricsContract;
+    readonly reviewSummary?: AdminQueueMetricsContract;
+  };
+}
+
+export interface AdminPaginationContract {
+  readonly page: number;
+  readonly pageSize: number;
+  readonly total: number;
+  readonly totalPages: number;
+}
+
+export interface AdminUserListContract extends AdminPaginationContract {
+  readonly items: readonly (UserContract & {
+    readonly orderCount: number;
+    readonly eventCount: number;
+  })[];
+  readonly summary: { readonly users: number; readonly admins: number };
+}
+
+export interface AdminOrderListContract extends AdminPaginationContract {
+  readonly items: readonly {
+    readonly id: string;
+    readonly status: string;
+    readonly subtotal: number;
+    readonly total: number;
+    readonly createdAt: string;
+    readonly itemCount: number;
+    readonly customer: { readonly name: string; readonly email: string };
+    readonly paymentStatus: PaymentStatusContract | null;
+  }[];
+  readonly summary: { readonly orders: number; readonly orderValue: number };
+}
+
+export type PaymentStatusContract =
+  "REQUIRES_PAYMENT" | "PROCESSING" | "SUCCEEDED" | "FAILED" | "CANCELED";
+
+export interface AdminPaymentListContract extends AdminPaginationContract {
+  readonly items: readonly {
+    readonly id: string;
+    readonly orderId: string;
+    readonly status: PaymentStatusContract;
+    readonly amount: number;
+    readonly currency: string;
+    readonly provider: string;
+    readonly createdAt: string;
+    readonly updatedAt: string;
+    readonly customer: { readonly name: string; readonly email: string };
+  }[];
+  readonly summary: {
+    readonly payments: number;
+    readonly succeeded: number;
+    readonly failed: number;
+    readonly succeededValue: number;
+  };
+}
+
+export interface AdminProductListContract extends AdminPaginationContract {
+  readonly items: readonly {
+    readonly id: string;
+    readonly title: string;
+    readonly source: string;
+    readonly externalId: string;
+    readonly sourceStatus: string;
+    readonly brand: string | null;
+    readonly thumbnail: string | null;
+    readonly category: string;
+    readonly price: number;
+    readonly rating: number;
+    readonly stock: number;
+    readonly hasEmbedding: boolean;
+    readonly reviewSummaryStatus: "PENDING" | "READY" | "FAILED" | null;
+    readonly updatedAt: string;
+  }[];
+  readonly summary: {
+    readonly products: number;
+    readonly active: number;
+    readonly outOfStock: number;
+    readonly embedded: number;
+  };
+}
+
+export interface AdminAiLogListContract extends AdminPaginationContract {
+  readonly items: readonly {
+    readonly id: string;
+    readonly operation: string;
+    readonly model: string;
+    readonly status: string;
+    readonly inputTokens: number | null;
+    readonly outputTokens: number | null;
+    readonly latencyMs: number;
+    readonly createdAt: string;
+    readonly user: { readonly name: string; readonly email: string } | null;
+  }[];
+  readonly summary: {
+    readonly requests: number;
+    readonly failures: number;
+    readonly averageLatencyMs: number;
+    readonly totalTokens: number;
+  };
+}
+
+export interface AdminIngestionStatusContract {
+  readonly catalog: {
+    readonly products: number;
+    readonly active: number;
+    readonly sourceMissing: number;
+    readonly embedded: number;
+    readonly lastProductUpdatedAt: string | null;
+    readonly sources: readonly {
+      readonly source: string;
+      readonly products: number;
+    }[];
+    readonly reviewSummaries: readonly {
+      readonly status: "PENDING" | "READY" | "FAILED";
+      readonly products: number;
+    }[];
+  };
+  readonly jobs: AdminAnalyticsOverviewContract["jobs"];
+}
+
+export interface AdminListQueryContract {
+  readonly page?: number;
+  readonly pageSize?: number;
+  readonly search?: string;
+  readonly status?: string;
+}
+
+export interface RecommendationItemContract {
+  readonly product: ProductSummaryContract;
+  readonly score: number;
+  readonly reason: "preference" | "behavior" | "popular" | "cold_start";
+  readonly rankingVersion: "personalized-v1";
+}
+
+export interface RecommendationsContract {
+  readonly items: readonly RecommendationItemContract[];
+  readonly personalized: boolean;
+  readonly rankingVersion: "personalized-v1";
+}
+
+export interface ReviewSummaryContract {
+  readonly status: "unavailable" | "pending" | "ready" | "failed";
+  readonly reviewCount: number;
+  readonly reviewSetHash?: string;
+  readonly themes: readonly string[];
+  readonly positives: readonly string[];
+  readonly negatives: readonly string[];
+  readonly caveats: readonly string[];
+  readonly updatedAt?: string;
+}
+
+export interface MultimodalSearchContract {
+  readonly items: readonly SemanticSearchCandidateContract[];
+  readonly mode: "image_to_text";
+}
+
+export interface CreatePaymentIntentRequest {
+  readonly idempotencyKey: string;
+}
+export interface PaymentContract {
+  readonly id: string;
+  readonly orderId: string;
+  readonly status:
+    "REQUIRES_PAYMENT" | "PROCESSING" | "SUCCEEDED" | "FAILED" | "CANCELED";
+  readonly amount: number;
+  readonly currency: string;
+  readonly clientSecret?: string;
 }

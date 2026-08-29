@@ -3,11 +3,13 @@ import { type JobsOptions } from 'bullmq';
 export const QUEUE_NAMES = {
   ingestion: 'ingestion',
   embedding: 'embedding',
+  reviewSummary: 'review-summary',
 } as const;
 
 export const JOB_NAMES = {
   syncProducts: 'SYNC_PRODUCTS',
   embedProduct: 'EMBED_PRODUCT',
+  summarizeReviews: 'SUMMARIZE_REVIEWS',
 } as const;
 
 export const SYNC_PRODUCTS_OPTIONS = {
@@ -29,6 +31,22 @@ export type SyncProductsJobData = Record<string, never>;
 export interface EmbedProductJobData {
   readonly productId: string;
   readonly contentHash: string;
+}
+
+export interface ReviewSummaryJobData {
+  readonly productId: string;
+  readonly reviewSetHash: string;
+}
+
+export const REVIEW_SUMMARY_OPTIONS = {
+  attempts: 3,
+  backoff: { type: 'exponential', delay: 2_000 },
+  removeOnComplete: { age: 86_400, count: 100 },
+  removeOnFail: { age: 604_800, count: 500 },
+} as const satisfies JobsOptions;
+
+export function reviewSummaryJobId(data: ReviewSummaryJobData): string {
+  return `review-summary:${data.productId}:${data.reviewSetHash}`;
 }
 
 export function embeddingJobId(data: EmbedProductJobData): string {

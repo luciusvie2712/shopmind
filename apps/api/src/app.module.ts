@@ -14,6 +14,12 @@ import { ProductsModule } from './modules/products/products.module';
 import { SearchModule } from './modules/search/search.module';
 import { UsersModule } from './modules/users/users.module';
 import { WishlistModule } from './modules/wishlist/wishlist.module';
+import { EventsModule } from './modules/events/events.module';
+import { AdminModule } from './modules/admin/admin.module';
+import { RecommendationsModule } from './modules/recommendations/recommendations.module';
+import { ReviewSummariesModule } from './modules/review-summaries/review-summaries.module';
+import { MultimodalModule } from './modules/multimodal/multimodal.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 
 @Module({
   imports: [
@@ -32,6 +38,12 @@ import { WishlistModule } from './modules/wishlist/wishlist.module';
     SearchModule,
     UsersModule,
     WishlistModule,
+    EventsModule,
+    AdminModule,
+    RecommendationsModule,
+    ReviewSummariesModule,
+    MultimodalModule,
+    PaymentsModule,
   ],
 })
 export class AppModule {}

@@ -33,11 +33,13 @@ describe('Phase 9 assistant and compare integration', () => {
   const generateGroundedRecommendation = jest.fn();
   const compareProducts = jest.fn();
   const chatWithTools = jest.fn();
+  const summarizeReviews = jest.fn();
   const aiProvider: AiProvider = {
     extractSearchIntent,
     generateGroundedRecommendation,
     compareProducts,
     chatWithTools,
+    summarizeReviews,
   };
 
   beforeAll(async () => {

@@ -6,6 +6,7 @@ import {
   rankSearchCandidates,
   rankingScore,
   RANKING_WEIGHTS,
+  FEEDBACK_RANKING_CONFIG,
   stockSignal,
 } from './ranking';
 
@@ -169,5 +170,23 @@ describe('deterministic hybrid ranking', () => {
     ]);
     expect(ranked[0].product.id).toBe('a-expensive');
     expect(ranked[0].score).toBe(ranked[1].score);
+  });
+
+  it('adds only a bounded versioned feedback contribution', () => {
+    const ranked = rankSearchCandidates(
+      [candidate('popular'), candidate('baseline')],
+      new Map([['popular', 99]]),
+    );
+    expect(FEEDBACK_RANKING_CONFIG).toEqual({
+      version: 'v2-feedback-1',
+      baseWeight: 0.95,
+      behaviorWeight: 0.05,
+    });
+    expect(ranked[0].product.id).toBe('popular');
+    expect(ranked[0].behaviorSignal).toBe(1);
+    expect(ranked[0].score - ranked[1].score).toBeCloseTo(0.05, 12);
+    expect(
+      ranked.every(({ rankingVersion }) => rankingVersion === 'v2-feedback-1'),
+    ).toBe(true);
   });
 });

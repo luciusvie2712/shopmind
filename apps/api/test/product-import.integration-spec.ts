@@ -7,9 +7,11 @@ import {
   type EmbedProductJobData,
 } from '../src/common/queue/queue.constants';
 import { DummyJsonClient } from '../src/modules/ingestion/dummy-json.client';
+import { DummyJsonSourceProvider } from '../src/modules/ingestion/dummy-json-source.provider';
 import { IngestionService } from '../src/modules/ingestion/ingestion.service';
 import { ProductImportRepository } from '../src/modules/ingestion/product-import.repository';
 import { ProductEmbeddingRepository } from '../src/modules/ingestion/product-embedding.repository';
+import { PRODUCT_SOURCE_PROVIDER } from '../src/modules/ingestion/product-source.provider';
 
 function product(id: number) {
   return {
@@ -71,6 +73,11 @@ describe('Importer transaction lifecycle and recovery (real PostgreSQL)', () => 
         IngestionService,
         ProductImportRepository,
         ProductEmbeddingRepository,
+        DummyJsonSourceProvider,
+        {
+          provide: PRODUCT_SOURCE_PROVIDER,
+          useExisting: DummyJsonSourceProvider,
+        },
         { provide: PrismaService, useValue: instrumented },
         { provide: DummyJsonClient, useValue: source },
         { provide: QueueService, useValue: queue },

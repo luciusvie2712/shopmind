@@ -19,6 +19,12 @@ import { ASSISTANT_SYSTEM_PROMPT } from '../prompts/assistant.prompt';
 import { COMPARE_SYSTEM_PROMPT } from '../prompts/compare.prompt';
 import { GROUNDED_RECOMMENDATION_SYSTEM_PROMPT } from '../prompts/grounded-recommendation.prompt';
 import { SEARCH_INTENT_SYSTEM_PROMPT } from '../prompts/search-intent.prompt';
+import { REVIEW_SUMMARY_SYSTEM_PROMPT } from '../prompts/review-summary.prompt';
+import {
+  reviewSummaryJsonSchema,
+  reviewSummaryOutputSchema,
+  type ReviewSummaryOutput,
+} from '../review-summary.schema';
 import {
   recommendationJsonSchema,
   recommendationOutputSchema,
@@ -153,6 +159,29 @@ export class GeminiAiProvider implements AiProvider {
         };
       },
       input.userId,
+    );
+  }
+
+  summarizeReviews(input: {
+    readonly productId: string;
+    readonly reviews: readonly {
+      readonly rating: number;
+      readonly comment: string;
+    }[];
+  }): Promise<ReviewSummaryOutput> {
+    return this.runOperation(
+      AI_OPERATIONS.reviewSummary,
+      () =>
+        this.client.generateStructured({
+          systemInstruction: REVIEW_SUMMARY_SYSTEM_PROMPT,
+          data: {
+            productId: input.productId,
+            reviews: input.reviews.slice(0, 100),
+          },
+          responseJsonSchema: reviewSummaryJsonSchema,
+          maxOutputTokens: 1_500,
+        }),
+      (response) => reviewSummaryOutputSchema.parse(response.value),
     );
   }
 

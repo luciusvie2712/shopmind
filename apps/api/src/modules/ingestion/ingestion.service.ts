@@ -1,9 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CatalogCacheService } from '../../common/cache/catalog-cache.service';
 import { QueueService } from '../../common/queue/queue.service';
-import { DummyJsonClient } from './dummy-json.client';
-import { parseDummyJsonProductsPayload } from './dummy-json.schema';
-import { normalizeDummyJsonProduct } from './product-normalizer';
+import { Inject } from '@nestjs/common';
+import {
+  PRODUCT_SOURCE_PROVIDER,
+  type ProductSourceProvider,
+} from './product-source.provider';
 import {
   ProductImportRepository,
   type ProductImportSummary,
@@ -14,7 +16,8 @@ export class IngestionService {
   private readonly logger = new Logger(IngestionService.name);
 
   constructor(
-    private readonly dummyJsonClient: DummyJsonClient,
+    @Inject(PRODUCT_SOURCE_PROVIDER)
+    private readonly productSource: ProductSourceProvider,
     private readonly productImportRepository: ProductImportRepository,
     private readonly catalogCache: CatalogCacheService,
     private readonly queueService: QueueService,
@@ -46,9 +49,15 @@ export class IngestionService {
   }
 
   async importProducts(): Promise<ProductImportSummary> {
-    const externalPayload = await this.dummyJsonClient.fetchProducts();
-    const payload = parseDummyJsonProductsPayload(externalPayload);
-    const products = payload.products.map(normalizeDummyJsonProduct);
+    const products = [];
+    let cursor: string | undefined;
+    do {
+      const page = await this.productSource.fetchPage(cursor);
+      products.push(...page.products);
+      cursor = page.complete ? undefined : page.cursor;
+      if (!page.complete && cursor === undefined)
+        throw new Error('Product source returned an invalid cursor');
+    } while (cursor !== undefined);
     const result = await this.productImportRepository.importProducts(products);
 
     await this.catalogCache.invalidateCatalog(result.affectedProductIds);

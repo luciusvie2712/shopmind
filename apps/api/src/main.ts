@@ -7,7 +7,7 @@ import { StructuredLogger } from './common/logging/structured-logger';
 
 async function bootstrap(): Promise<void> {
   const logger = new StructuredLogger();
-  const app = await NestFactory.create(AppModule, { logger });
+  const app = await NestFactory.create(AppModule, { logger, rawBody: true });
 
   configureHttpApplication(app, logger);
 

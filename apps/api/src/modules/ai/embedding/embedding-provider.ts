@@ -1,4 +1,14 @@
 export const EMBEDDING_PROVIDER = Symbol('EMBEDDING_PROVIDER');
+export const MULTIMODAL_EMBEDDING_PROVIDER = Symbol(
+  'MULTIMODAL_EMBEDDING_PROVIDER',
+);
+
+export interface MultimodalEmbeddingProvider {
+  embedImage(
+    data: Buffer,
+    mimeType: 'image/jpeg' | 'image/png',
+  ): Promise<number[]>;
+}
 
 export interface EmbeddingProvider {
   embedText(text: string): Promise<number[]>;

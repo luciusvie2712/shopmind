@@ -8,6 +8,12 @@ export const RANKING_WEIGHTS = {
   stock: 0.1,
 } as const;
 
+export const FEEDBACK_RANKING_CONFIG = {
+  version: 'v2-feedback-1',
+  baseWeight: 0.95,
+  behaviorWeight: 0.05,
+} as const;
+
 export interface RankingSignals {
   readonly semanticSimilarity: number;
   readonly keywordRelevance: number;
@@ -19,6 +25,8 @@ export interface RankingSignals {
 export interface RankedSearchCandidate extends RankingSignals {
   readonly product: SearchCandidate['product'];
   readonly score: number;
+  readonly behaviorSignal?: number;
+  readonly rankingVersion?: string;
 }
 
 export function normalizeUnitSignal(value: number): number {
@@ -46,6 +54,7 @@ export function rankingScore(signals: RankingSignals): number {
 
 export function rankSearchCandidates(
   candidates: readonly SearchCandidate[],
+  behaviorSignals: ReadonlyMap<string, number> = new Map(),
 ): RankedSearchCandidate[] {
   return candidates
     .map((candidate) => {
@@ -56,10 +65,18 @@ export function rankSearchCandidates(
         normalizedRating: normalizeRating(Number(candidate.product.rating)),
         stockSignal: stockSignal(candidate.product.stock),
       };
+      const behaviorSignal = normalizeUnitSignal(
+        behaviorSignals.get(candidate.product.id) ?? 0,
+      );
       return {
         product: candidate.product,
         ...signals,
-        score: rankingScore(signals),
+        behaviorSignal,
+        rankingVersion: FEEDBACK_RANKING_CONFIG.version,
+        score: normalizeUnitSignal(
+          rankingScore(signals) * FEEDBACK_RANKING_CONFIG.baseWeight +
+            behaviorSignal * FEEDBACK_RANKING_CONFIG.behaviorWeight,
+        ),
       };
     })
     .sort(compareRankedCandidates);

@@ -9,6 +9,7 @@ export const AI_OPERATIONS = {
   groundedRecommendation: 'grounded_recommendation',
   assistantTurn: 'assistant_turn',
   compare: 'compare',
+  reviewSummary: 'review_summary',
 } as const;
 
 export const AI_OPERATION_STATUS = {

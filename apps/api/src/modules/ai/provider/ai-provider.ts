@@ -68,6 +68,13 @@ export type AssistantTurnOutput =
 export interface AiProvider extends AiSearchProvider {
   compareProducts(input: CompareProviderInput): Promise<CompareOutput>;
   chatWithTools(input: AssistantTurnInput): Promise<AssistantTurnOutput>;
+  summarizeReviews(input: {
+    readonly productId: string;
+    readonly reviews: readonly {
+      readonly rating: number;
+      readonly comment: string;
+    }[];
+  }): Promise<ReviewSummaryOutput>;
 }
 
 export class AiProviderInvalidOutputError extends Error {
@@ -93,3 +100,4 @@ export class AiProviderUnavailableError extends Error {
 import type { ComparisonProductContract } from '@shopmind/contracts';
 import type { AssistantFinalOutput } from '../assistant.schema';
 import type { CompareOutput } from '../comparison.schema';
+import type { ReviewSummaryOutput } from '../review-summary.schema';

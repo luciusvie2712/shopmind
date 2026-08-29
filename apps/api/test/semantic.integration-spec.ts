@@ -492,9 +492,13 @@ describe('Phase 6 semantic integration', () => {
     expect(JSON.stringify(response.body)).not.toContain('embedding');
     expect(response.body.items[0]).not.toHaveProperty('reason');
 
-    jest
-      .mocked(embeddingProvider.embedText)
-      .mockRejectedValueOnce(new EmbeddingProviderTimeoutError());
+    jest.mocked(embeddingProvider.embedText).mockImplementation(async (text) => {
+      if (text === 'Provider timeout query')
+        throw new EmbeddingProviderTimeoutError();
+      return text.toLowerCase().includes('phone')
+        ? unitVector(1)
+        : unitVector(0);
+    });
     const timeout = await request(app.getHttpServer())
       .post('/api/v1/search/semantic')
       .send({ query: 'Provider timeout query' })
