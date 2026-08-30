@@ -1,19 +1,30 @@
-import { Sparkles } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
+import brandLogo from "@/assets/logo-header-navbar.png";
 
 export function BrandLogo({ compact = false }: { readonly compact?: boolean }) {
   return (
     <Link
       href="/"
       aria-label="ShopMind home"
-      className="group inline-flex items-center gap-2.5 rounded-lg font-bold tracking-tight text-slate-950 focus-visible:outline-teal-700"
+      className="group inline-flex rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-700"
     >
-      <span className="relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-teal-50 text-teal-700 ring-1 ring-teal-100 transition duration-300 group-hover:-translate-y-0.5 group-hover:shadow-sm motion-reduce:transform-none">
-        <span className="absolute -left-2 top-0 size-6 rotate-45 bg-cyan-300/55" />
-        <span className="absolute -right-2 bottom-0 size-6 rotate-45 bg-indigo-300/55" />
-        <Sparkles className="relative size-4" aria-hidden="true" />
+      <span
+        className={`relative block shrink-0 overflow-hidden ${
+          compact
+            ? "h-10 w-[150px]"
+            : "h-11 w-[152px] sm:w-[174px]"
+        }`}
+      >
+        <Image
+          src={brandLogo}
+          alt="ShopMind"
+          fill
+          priority={!compact}
+          sizes={compact ? "150px" : "(min-width: 640px) 174px, 152px"}
+          className="object-contain scale-[2.65] transition-transform duration-300 group-hover:scale-[2.72] motion-reduce:transition-none"
+        />
       </span>
-      <span className={compact ? "text-lg" : "text-xl"}>ShopMind</span>
     </Link>
   );
 }

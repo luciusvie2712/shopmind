@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import siteLogo from "@/assets/logo-site.png";
 import { SiteHeader } from "@/components/site-header";
 import { SiteUtilities } from "@/components/site-utilities";
 import "./globals.css";
@@ -11,6 +12,11 @@ export const metadata: Metadata = {
     template: "%s | ShopMind",
   },
   description: "AI-powered product discovery and shopping assistant",
+  icons: {
+    icon: [{ url: siteLogo.src, type: "image/png" }],
+    shortcut: [{ url: siteLogo.src, type: "image/png" }],
+    apple: [{ url: siteLogo.src, type: "image/png" }],
+  },
 };
 
 type RootLayoutProps = Readonly<{
