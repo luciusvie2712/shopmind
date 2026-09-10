@@ -195,3 +195,54 @@ At minimum verify:
 - both demo fulfillment terminal scenarios;
 - product import and embedding worker completion;
 - no secret values appear in GitHub, Northflank or application logs.
+
+## 8. AI timeout / unavailable recovery
+
+`AI_PROVIDER_TIMEOUT` is the stable public code for both timeout and provider
+unavailability. A compare response with `status: fallback` does not prove that
+the 8-second deadline expired. HTTP 400, 403, 404, 429 and 503 from Gemini can
+also produce that fallback while canonical product facts remain available.
+
+First inspect the **deployed** Northflank API environment, not just `.env` on
+a developer machine. Use the documented model and timeout baseline:
+
+```dotenv
+GEMINI_MODEL=gemini-3.1-flash-lite
+GEMINI_EMBEDDING_MODEL=gemini-embedding-2
+GEMINI_EMBEDDING_DIMENSION=768
+AI_TIMEOUT_MS=8000
+AI_FALLBACK_PROVIDER=none
+```
+
+Pin the model rather than using moving aliases such as `gemini-flash-latest`.
+An existing environment override takes precedence over the application's
+default; deploying code alone will not replace that override. Keep the key in
+Northflank secrets. Redeploy the API after configuration changes, and the
+worker if its shared configuration changed. Do not increase the deadline to
+hide an invalid key, inaccessible model or exhausted quota.
+
+The `GeminiClient` warning contains only allowlisted diagnostics: operation,
+model, HTTP status (when available), failure reason, latency and timeout.
+It never logs the raw provider error, key, prompt or response body.
+
+| `ai.failureReason` | Action |
+|---|---|
+| `missing_api_key` | Check secret injection into the running service. |
+| `access_denied` (401/403) | Check key restrictions and Gemini API/project access. |
+| `model_not_found` (404) | Check the configured model ID and project access. |
+| `invalid_request` (400) | Check SDK/schema/tool compatibility; do not retry blindly. |
+| `rate_limited` (429) | Check the model's project quota and usage in AI Studio. |
+| `provider_unavailable` (e.g. 503) | Check provider availability and pinned model; retry later if persistent. |
+| `deadline_exceeded` | Check provider latency and outbound connectivity from the API service. |
+| `transport_error` | Check DNS, TLS and outbound HTTPS access to Gemini. |
+
+Transient 502/503/504 responses receive at most one short retry within the
+same `AI_TIMEOUT_MS` deadline. Client errors and quota failures are not retried
+automatically. Assistant tool calls preserve Gemini thought signatures in
+server-side turn context; these are not sent to the browser or logged.
+
+After rollout, test AI search, compare with 2–4 real product IDs, an authenticated
+assistant request that actually calls a tool, and semantic search. Confirm
+successful grounded output and inspect latency/failure diagnostics. `/health`
+alone does not verify Gemini access. Never mark production recovered based
+only on unit tests or a successful request from a developer machine.

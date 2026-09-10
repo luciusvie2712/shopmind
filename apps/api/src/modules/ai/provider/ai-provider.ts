@@ -36,6 +36,8 @@ export interface AssistantToolDeclaration {
 
 export interface AssistantToolCall {
   readonly id?: string;
+  // Opaque provider context, retained only for the current server-side tool loop.
+  readonly thoughtSignature?: string;
   readonly name: string;
   readonly args: unknown;
 }
